@@ -317,6 +317,7 @@ main() {
             else
                 ((failed_count++)) || true
             fi
+            echo ""
         fi
     done
     
