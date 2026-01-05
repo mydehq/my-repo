@@ -1,0 +1,101 @@
+name: Build AUR Packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/build.yml
+      - packages.yml
+      - src/**
+
+  workflow_dispatch:
+
+concurrency:
+  group: build-packages
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Setup Arch Linux environment
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel devtools git go-yq jq
+
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Check & create repo branch
+        run: |
+          TARGET_BRANCH="repo"
+
+          # Check if branch exists on remote
+          if git ls-remote --heads origin "$TARGET_BRANCH" | grep -q "$TARGET_BRANCH"; then
+            echo "✅ Branch '$TARGET_BRANCH' found."
+          else
+            echo "⚠️ Branch '$TARGET_BRANCH' not found. Creating it now."
+
+            # Create and initialize the orphan branch
+            git checkout --orphan "$TARGET_BRANCH"
+            git rm -rf .
+            git commit --allow-empty -m "Initialize $TARGET_BRANCH branch"
+            git push origin "$TARGET_BRANCH"
+            git checkout main
+          fi
+
+      - name: Checkout repo branch into build directory
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: repo
+          path: build
+          fetch-depth: 1
+
+      - name: Create build user
+        run: |
+          # devtools requires non-root user for building
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+
+      - name: Build packages
+        run: |
+          su builder -c "bash src/builder"
+
+      - name: Publish to repo branch
+        run: |
+          cd build
+
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          git add .
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            # Create a single commit (squash history)
+            git checkout --orphan temp-branch
+            git add .
+            git commit -m "Update packages from ${{ github.sha }}"
+
+            # Force push to keep only one commit
+            git push origin temp-branch:repo --force
+
+            echo "✅ Published packages to repo branch"
+          fi

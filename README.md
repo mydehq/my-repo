@@ -20,8 +20,6 @@
     pacman -Sy
    ```
 
----
-
 <br>
 
 <!--
@@ -69,10 +67,11 @@
 
 ```text
 arch-repo/
-├── build.sh                 # build-only script (root)
+├── src/
+│   └── builder              # build-only script
 ├── packages.yml             # declarative package list
 ├── build/                   # build output (gitignored)
-|   |-- x86_64/
+│   └── x86_64/
 ├── .github/
 │   └── workflows/
 │       └── build.yml        # CI pipeline
@@ -102,7 +101,7 @@ packages:
     1. Check out main
     2. Check out repo branch in build/
     3. If it doesn't exist, make.
-    3. Run src/build.sh
+    3. Run `src/builder`
     5. Commit changes & push
     6. It should keep only one commit in repo branch. History should be deleted else the repo will become too big over time.
     7. Let GitHub Pages serve it
@@ -116,9 +115,9 @@ packages:
         4. yq (go-yq)
         5. jq
 
-### Build Script (build.sh)
+### Build Script (builder)
 
-- What build.sh MUST do:
+- What builder MUST do:
     1. Read packages.yml
     2. Clone AUR repos
     3. Decide which packages to build by checking build/ dir
@@ -127,13 +126,13 @@ packages:
     6. any other steps needed
     7. Output artifacts to build directory
 
-- What build.sh should NOT do
+- What builder should NOT do
     1. Switch git branches
     2. Commit or push anything
     3. Know about GitHub Pages
     4. Perform uploading or deployment
 
-- `build.sh` outputs one dir:
+- `builder` outputs one dir:
 
     ```
     build/
