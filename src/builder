@@ -123,8 +123,7 @@ build-package() {
     install-pkg-deps "."
     
     # Build package
-    # Build package
-    if ! makepkg --noconfirm --force; then
+    if ! makepkg --noconfirm --nodeps --force; then
         log-error "Build failed for ${pkg_name}"
         popd > /dev/null
         return 1
