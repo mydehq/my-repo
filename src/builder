@@ -210,24 +210,45 @@ generate-landing-page() {
     local content
     content=$(<"$template")
     content="${content//\{\{REPO_NAME\}\}/$REPO_NAME}"
+    
+    # Inject Timestamp
     content="${content//\{\{LAST_UPDATED\}\}/$(date -Iminutes)}"
     content="${content//\{\{PACKAGE_COUNT\}\}/$pkg_count}"
     content="${content//\{\{PACKAGE_ROWS\}\}/$package_rows}"
     
-    echo "$content" > "$output"
+    # Only update if content changed (ignoring the timestamp line)
+    if [[ -f "$output" ]]; then
+        echo "$content" > "${output}.tmp"
+        
+        if diff -q -I 'id="last-updated"' "$output" "${output}.tmp" >/dev/null; then
+            log-info "Landing page content unchanged (ignoring timestamp). Skipping update."
+            rm "${output}.tmp"
+        else
+            mv "${output}.tmp" "$output"
+            log-success "Landing page updated at ${output}"
+        fi
+    else
+        echo "$content" > "$output"
+        log-success "Landing page generated at ${output}"
+    fi
     
     # Copy icon if exists
     if [[ -f "src/icon.png" ]]; then
-        cp "src/icon.png" "$BUILD_DIR/"
-        log-success "Copied icon.png to build directory"
+        if [[ ! -f "$BUILD_DIR/icon.png" ]] || ! cmp -s "src/icon.png" "$BUILD_DIR/icon.png"; then
+            cp "src/icon.png" "$BUILD_DIR/"
+            log-success "Copied icon.png to build directory"
+        fi
     fi
-    
-    log-success "Landing page generated at ${output}"
     
     # Generate Repository README
     if [[ -f "src/repo-README.md" ]]; then
-        cp "src/repo-README.md" "$BUILD_DIR/README.md"
-        log-success "Repository README generated at $BUILD_DIR/README.md"
+        local readme_out="$BUILD_DIR/README.md"
+        if [[ ! -f "$readme_out" ]] || ! cmp -s "src/repo-README.md" "$readme_out"; then
+            cp "src/repo-README.md" "$readme_out"
+            log-success "Repository README updated at $readme_out"
+        else
+             log-info "Repository README unchanged."
+        fi
     fi
 }
 
