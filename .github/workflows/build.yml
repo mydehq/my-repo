@@ -27,7 +27,7 @@ jobs:
       - name: Setup Arch Linux environment
         run: |
           pacman -Syu --noconfirm
-          pacman -S --noconfirm base-devel devtools git go-yq jq
+          pacman -S --noconfirm base-devel git go-yq jq
 
       - name: Checkout main branch
         uses: actions/checkout@v4

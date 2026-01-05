@@ -110,10 +110,9 @@ packages:
   - Arch Linux container
   - Installed tools:
         1. base-devel
-        2. devtools
-        3. git
-        4. yq (go-yq)
-        5. jq
+        2. git
+        3. yq (go-yq)
+        4. jq
 
 ### Build Script (builder)
 
@@ -121,7 +120,7 @@ packages:
     1. Read packages.yml
     2. Clone AUR repos
     3. Decide which packages to build by checking build/ dir
-    4. Build using extra-x86_64-build from devtools
+    4. Build using makepkg
     5. Use repo-add to index repo
     6. any other steps needed
     7. Output artifacts to build directory
