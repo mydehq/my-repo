@@ -2,7 +2,7 @@
     <img src="./src/icon.png" alt="MyTM" width="80">
     <h1>arch-repo</h1>
     <p>
-        <b>Arch repo with automated built selected packages from AUR, similar to chaotic-aur</b>
+        <b>Arch repo with automated built selected packages from AUR</b>
     </p>
 </div>
 
