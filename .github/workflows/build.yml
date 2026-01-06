@@ -9,8 +9,8 @@ on:
       - src/**
 
   schedule:
-    # Run every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
-    - cron: '47 */6 * * *'
+    # Run every 8 hours (00:00, 08:00, 16:00 UTC)
+    - cron: '47 */8 * * *'
 
   workflow_dispatch:
 
