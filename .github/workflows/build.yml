@@ -26,17 +26,28 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
+    
+    env:
+      CARGO_HOME: ${{ github.workspace }}/.cargo
+      CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo/target
+      GOCACHE: ${{ github.workspace }}/.go/cache
+      GOMODCACHE: ${{ github.workspace }}/.go/mod
 
     steps:
-      - name: Cache Pacman Packages and AUR
+      - name: Cache Build Dependencies
         uses: actions/cache@v4
         with:
+          key: deps-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: deps-${{ runner.os }}-
           path: |
             /var/cache/pacman/pkg
             aur
-          key: pacman-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            pacman-${{ runner.os }}-
+            ${{ env.CARGO_HOME }}/registry/index/
+            ${{ env.CARGO_HOME }}/registry/cache/
+            ${{ env.CARGO_HOME }}/git/db/
+            ${{ env.CARGO_TARGET_DIR }}/
+            ${{ env.GOCACHE }}/
+            ${{ env.GOMODCACHE }}/
 
       - name: Setup Arch Linux environment
         run: |
@@ -93,7 +104,7 @@ jobs:
 
       - name: Build packages
         run: |
-          su builder -c "bash src/builder"
+          su builder -c "export CARGO_HOME=$CARGO_HOME; export CARGO_TARGET_DIR=$CARGO_TARGET_DIR; export GOCACHE=$GOCACHE; export GOMODCACHE=$GOMODCACHE; bash src/builder"
 
       - name: Publish to repo branch
         run: |
