@@ -13,3 +13,4 @@ packages:
   - name: ttf-sil-abyssinica  
   - name: git-credential-keepassxc-bin
   - name: catnap
+  - name: sqlit
