@@ -222,7 +222,7 @@
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge bg-mauve text-dark fw-bold">STEP 1</span>
-                                    <span class="text-secondary small">Add in /etc/pacman.conf</span>
+                                    <span class="text-secondary small">Add repo in pacman.conf</span>
                                 </div>
                                 <button class="copy-btn" onclick="copyConfig(1)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
@@ -234,11 +234,9 @@
                                 </button>
                             </div>
                             <div class="config-content">
-                                <div class="text-mauve mb-1">[{{REPO_NAME}}]</div>
-                                <div class="text-light">SigLevel = <span class="text-blue">Optional TrustAll</span>
-                                </div>
-                                <div class="text-light">Server = <span
-                                        class="text-sapphire">https://mydehq.github.io/arch-repo/$arch</span></div>
+                                <span class="text-mauve">sudo bash -c </span>
+                                <span class="text-green">'printf "\n[{{REPO_NAME}}]\nSigLevel = Optional TrustAll\nServer = {{REPO_URL}}/\$arch\n" >>
+                                    /etc/pacman.conf'</span>
                             </div>
                         </div>
                     </div>
@@ -383,7 +381,7 @@
         function copyConfig(step) {
             let text = "";
             if (step === 1) {
-                text = "[{{REPO_NAME}}]\nSigLevel = Optional TrustAll\nServer = https://mydehq.github.io/arch-repo/$arch";
+                text = "sudo bash -c 'printf \"\\n[{{REPO_NAME}}]\\nSigLevel = Optional TrustAll\\nServer = {{REPO_URL}}/\\$arch\\n\" >> /etc/pacman.conf'";
             } else if (step === 2) {
                 text = "sudo pacman -Sy";
             }

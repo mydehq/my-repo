@@ -1,10 +1,11 @@
 packages:
   # Official projects
   - name: myctl
-  # - name: mytm
+  - name: mytm
   - name: nautilus-dummy
 
   # 3rd party
+  - name: kireisakura-kit
   - name: mpv-mpris2-bin
   - name: vicinae-bin
   - name: app2unit
