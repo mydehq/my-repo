@@ -10,7 +10,8 @@ packages:
   - name: app2unit
   - name: catppuccin-cursors-macchiato
   - name: vorta-root
-  - name: ttf-sil-abyssinica  
+  - name: ttf-sil-abyssinica
   - name: git-credential-keepassxc-bin
   - name: catnap
   - name: sqlit
+  - name: python-textual-fastdatatable-latest

@@ -178,7 +178,7 @@
         <div class="container" style="max-width: 900px">
             <a class="navbar-brand d-flex align-items-center gap-3 fw-bold text-primary" href="#">
                 <img src="./icon.png" alt="Logo" width="32" height="32" class="rounded shadow-sm" />
-                <span id="navbar-title">{{REPO_NAME}} <span class="text-secondary opacity-50 mx-2">/</span> <span
+                <span id="navbar-title">MyDE HQ <span class="text-secondary opacity-50 mx-2">/</span> <span
                         class="fw-normal opacity-75">Arch Repo</span></span>
             </a>
             <a class="nav-link fw-bold text-primary ms-auto d-flex align-items-center gap-2"
@@ -198,12 +198,12 @@
         <!-- Repository Info Stats -->
         <div class="row g-3 mb-5 pb-3 border-bottom border-light border-opacity-10 text-center flex-shrink-0">
             <div class="col-4 stat-card border-end border-light border-opacity-10">
-                <span class="stat-header">Repo Name</span>
-                <span class="stat-value text-mauve">{{REPO_NAME}}</span>
-            </div>
-            <div class="col-4 stat-card border-end border-light border-opacity-10">
                 <span class="stat-header">Packages</span>
                 <span class="stat-value text-sapphire">{{PACKAGE_COUNT}}</span>
+            </div>
+            <div class="col-4 stat-card border-end border-light border-opacity-10">
+                <span class="stat-header">Repo Name</span>
+                <span class="stat-value text-mauve">{{REPO_NAME}}</span>
             </div>
             <div class="col-4 stat-card">
                 <span class="stat-header">Last Updated</span>
@@ -222,7 +222,7 @@
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge bg-mauve text-dark fw-bold">STEP 1</span>
-                                    <span class="text-secondary small">Edit /etc/pacman.conf</span>
+                                    <span class="text-secondary small">Add in /etc/pacman.conf</span>
                                 </div>
                                 <button class="copy-btn" onclick="copyConfig(1)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
