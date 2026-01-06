@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/build.yml
-      - packages.yml
+      - config.yml
       - src/**
 
   schedule:
@@ -52,7 +52,7 @@ jobs:
       - name: Setup Arch Linux environment
         run: |
           pacman -Syu --noconfirm
-          pacman -S --noconfirm base-devel git go-yq
+          pacman -S --noconfirm --needed base-devel git go-yq diffutils
 
           # Disable debug package generation
           sed -i 's/OPTIONS=(.*debug.*/OPTIONS=(!debug)/' /etc/makepkg.conf

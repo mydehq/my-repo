@@ -11,27 +11,22 @@
 
 ## Installation
 
-- Add the repo to `pacman.conf`:
+Run the following command to add the repository:
 
-    ```sh
-    sudo bash -c 'printf "\n[mydehq]\nSigLevel = Optional TrustAll\nServer = https://mydehq.github.io/arch-repo/\$arch\n" >> /etc/pacman.conf'
-    ```
-
-- Sync the database:
-
-   ```sh
-    sudo pacman -Sy
-   ```
+```sh
+curl -sL https://mydehq.github.io/arch-repo/install | sudo bash
+```
 
 ## Adding Packages in repo
 
-Simply edit `packages.yml` and add desired AUR package names:
+Simply edit `config.yml` and add desired AUR package names:
 
 ```yml
 packages:
-  - name: myctl
-  - name: vicinae-bin
-  - name: catppuccin-cursors-macchiato
+  aur:
+    - name: myctl
+    - name: vicinae-bin
+    - name: catppuccin-cursors-macchiato
 ```
 The GitHub Action will automatically detect changes, build the packages, update the repository index, and regenerate the dashboard.
 

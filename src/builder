@@ -12,9 +12,10 @@
 set -euo pipefail
 
 # Configuration
-REPO_NAME="mydehq"
-REPO_URL="https://${REPO_NAME}.github.io/arch-repo"
-PACKAGES_FILE="packages.yml"
+PACKAGES_FILE="config.yml"
+REPO_NAME=$(yq '.meta.repo-name // "mydehq"' "$PACKAGES_FILE")
+REPO_URL=$(yq '.meta.repo-url // "https://mydehq.github.io/arch-repo"' "$PACKAGES_FILE")
+PROJECT_URL=$(yq '.meta.project-url // "https://github.com/mydehq/arch-repo"' "$PACKAGES_FILE")
 BUILD_DIR="build"
 ARCH="x86_64"
 AUR_BASE_URL="https://aur.archlinux.org"
@@ -30,7 +31,7 @@ NC='\033[0m' # No Color
 : ${CI:=""}
 
 # Logging functions (MyTM style)
-log()         {
+log(){
     if [[ -n "$CI" ]]; then
         echo -e "${BLUE}-${NC} $*" >&2
     else
@@ -193,6 +194,29 @@ update-repo-database() {
     log
 }
 
+cmp-files() {
+  local file1="$1"
+  local file2="$2"
+
+  # Get file extension
+  local ext="${file1##*.}"
+
+  # Text file extensions
+  case "$ext" in
+  html | htm | css | js | jsx | ts | tsx | json | xml | txt | md | mdx | yml | yaml | toml | py | c | cc | cpp | hpp | h | sh | bash | zsh | rs | go | zig | gitignore)
+    # Use diff for text files
+    diff -q "$file1" "$file2" &>/dev/null
+    return $?
+    ;;
+  *)
+    # Use cmp for binary files or unknown extensions
+    cmp -s "$file1" "$file2"
+    return $?
+    ;;
+  esac
+}
+
+
 
 # Generate a static landing page
 generate-landing-page() {
@@ -209,11 +233,11 @@ generate-landing-page() {
     
     local package_rows=""
     local pkg_count
-    pkg_count=$(yq '.packages | length' "$PACKAGES_FILE")
+    pkg_count=$(yq '.packages.aur | length' "$PACKAGES_FILE")
     
     for ((i=0; i<pkg_count; i++)); do
         local pkg_name pkg_version
-        pkg_name=$(yq ".packages[$i].name" "$PACKAGES_FILE")
+        pkg_name=$(yq ".packages.aur[$i].name" "$PACKAGES_FILE")
         pkg_version=$(get-repo-version "$pkg_name")
         
         # If version not found in repo, skip from landing page
@@ -232,6 +256,7 @@ generate-landing-page() {
     content=$(<"$template")
     content="${content//\{\{REPO_NAME\}\}/$REPO_NAME}"
     content="${content//\{\{REPO_URL\}\}/$REPO_URL}"
+    content="${content//\{\{PROJECT_URL\}\}/$PROJECT_URL}"
     
     # Inject Timestamp
     content="${content//\{\{LAST_UPDATED\}\}/$(date -Iminutes)}"
@@ -256,7 +281,7 @@ generate-landing-page() {
     
     # Copy icon if exists
     if [[ -f "src/icon.png" ]]; then
-        if [[ ! -f "$BUILD_DIR/icon.png" ]] || ! cmp -s "src/icon.png" "$BUILD_DIR/icon.png"; then
+        if [[ ! -f "$BUILD_DIR/icon.png" ]] || ! cmp-files "src/icon.png" "$BUILD_DIR/icon.png"; then
             cp "src/icon.png" "$BUILD_DIR/"
             log.success "   Copied icon.png"
         fi
@@ -265,11 +290,30 @@ generate-landing-page() {
     # Generate Repo README
     if [[ -f "src/repo-README.md" ]]; then
         local readme_out="$BUILD_DIR/README.md"
-        if [[ ! -f "$readme_out" ]] || ! cmp -s "src/repo-README.md" "$readme_out"; then
+        if [[ ! -f "$readme_out" ]] || ! cmp-files "src/repo-README.md" "$readme_out"; then
             cp "src/repo-README.md" "$readme_out"
             log.success "   Generated: Repo README."
         else
              log "   Unchanged: Repo README."
+        fi
+    fi
+
+    # Generate Installer
+    if [[ -f "src/install.sh" ]]; then
+        local install_template="src/install.sh"
+        local install_out="$BUILD_DIR/install"
+        
+        local install_content
+        install_content=$(<"$install_template")
+        install_content="${install_content//\{\{REPO_NAME\}\}/$REPO_NAME}"
+        install_content="${install_content//\{\{REPO_URL\}\}/$REPO_URL}"
+        
+        if [[ ! -f "$install_out" ]] || [[ "$install_content" != "$(<"$install_out")" ]]; then
+            echo "$install_content" > "$install_out"
+            chmod +x "$install_out"
+            log.success "   Generated: installer"
+        else
+             log "   Unchanged: installer"
         fi
     fi
 }
@@ -277,7 +321,7 @@ generate-landing-page() {
 
 # Get list of valid packages from packages.yml
 get-valid-packages() {
-    yq '.packages[].name' "$PACKAGES_FILE"
+    yq '.packages.aur[].name' "$PACKAGES_FILE"
 }
 
 # Clean up unused AUR clones
@@ -379,6 +423,7 @@ cleanup-repo() {
             if [[ "$item" == "$ARCH" ]] || \
                [[ "$item" == "index.html" ]] || \
                [[ "$item" == "README.md" ]] || \
+                [[ "$item" == "install" ]] || \
                [[ "$item" == "icon.png" ]]; then
                 continue
             fi
@@ -419,7 +464,7 @@ main() {
     
     # Get number of packages
     local pkg_count
-    pkg_count=$(yq '.packages | length' "$PACKAGES_FILE")
+    pkg_count=$(yq '.packages.aur | length' "$PACKAGES_FILE")
     log.info "Found ${pkg_count} packages in ${PACKAGES_FILE}"
     
     local built_count=0
@@ -431,8 +476,8 @@ main() {
         local pkg_name
         local force_build
         
-        pkg_name=$(yq ".packages[$i].name" "$PACKAGES_FILE")
-        force_build=$(yq ".packages[$i].force // false" "$PACKAGES_FILE")
+        pkg_name=$(yq ".packages.aur[$i].name" "$PACKAGES_FILE")
+        force_build=$(yq ".packages.aur[$i].force // false" "$PACKAGES_FILE")
         
         log
         log.info "Processing package: ${YELLOW}${pkg_name}${NC}"

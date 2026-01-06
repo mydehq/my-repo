@@ -73,32 +73,6 @@
             background: rgba(var(--bs-primary-rgb), 0.6);
         }
 
-        .navbar {
-            background-color: rgba(30, 30, 46, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(var(--bs-primary-rgb), 0.3);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(var(--bs-primary-rgb), 0.6);
-        }
-
         .repo-config-box {
             background-color: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.06);
@@ -169,6 +143,81 @@
         .letter-spacing-1 {
             letter-spacing: 0.12em;
         }
+
+        .bg-mauve {
+            background-color: var(--ctp-mauve);
+        }
+
+        .bg-green {
+            background-color: var(--ctp-green);
+        }
+
+        .carousel-indicators [data-bs-target] {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--ctp-flamingo);
+            margin: 0 4px;
+        }
+
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            filter: invert(1) grayscale(100%) brightness(2);
+        }
+
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--ctp-subtext1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75rem;
+            font-family: inherit;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+
+        .time-separator {
+            opacity: 0.5;
+            font-size: 0.85em;
+            margin: 0 0.25rem;
+            font-weight: normal;
+        }
+
+        .config-content {
+            overflow-x: auto;
+            white-space: nowrap;
+            flex-grow: 1;
+            /* Hide scrollbar */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .config-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-pop {
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
     </style>
 </head>
 
@@ -181,8 +230,8 @@
                 <span id="navbar-title">MyDE HQ <span class="text-secondary opacity-50 mx-2">/</span> <span
                         class="fw-normal opacity-75">Arch Repo</span></span>
             </a>
-            <a class="nav-link fw-bold text-primary ms-auto d-flex align-items-center gap-2"
-                href="https://github.com/mydehq/arch-repo" target="_blank">
+            <a class="nav-link fw-bold text-primary ms-auto d-flex align-items-center gap-2" href="{{PROJECT_URL}}"
+                target="_blank">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-github"
                     viewBox="0 0 16 16">
                     <path
@@ -211,138 +260,30 @@
             </div>
         </div>
 
-        <!-- Setup Instructions Carousel -->
-        <div class="flex-shrink-0 mb-5 text-center">
-            <h3 class="h6 text-uppercase text-primary fw-bold mb-3 letter-spacing-1">Setup Instructions</h3>
-            <div id="setupCarousel" class="carousel slide max-width-repo" data-bs-interval="false">
-                <div class="carousel-inner">
-                    <!-- Step 1: Config -->
-                    <div class="carousel-item active">
-                        <div class="repo-config-box text-start" id="config-step-1">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-mauve text-dark fw-bold">STEP 1</span>
-                                    <span class="text-secondary small">Add repo in pacman.conf</span>
-                                </div>
-                                <button class="copy-btn" onclick="copyConfig(1)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
-                                        class="bi bi-copy" viewBox="0 0 16 16">
-                                        <path fill-rule="evenodd"
-                                            d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z" />
-                                    </svg>
-                                    <span>Copy</span>
-                                </button>
-                            </div>
-                            <div class="config-content">
-                                <span class="text-mauve">sudo bash -c </span>
-                                <span class="text-green">'printf "\n[{{REPO_NAME}}]\nSigLevel = Optional TrustAll\nServer = {{REPO_URL}}/\$arch\n" >>
-                                    /etc/pacman.conf'</span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Step 2: Sync -->
-                    <div class="carousel-item">
-                        <div class="repo-config-box text-start d-flex flex-column justify-content-center"
-                            id="config-step-2" style="min-height: 140px;">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-green text-dark fw-bold">STEP 2</span>
-                                    <span class="text-secondary small">Sync Databases</span>
-                                </div>
-                                <button class="copy-btn" onclick="copyConfig(2)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
-                                        class="bi bi-copy" viewBox="0 0 16 16">
-                                        <path fill-rule="evenodd"
-                                            d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z" />
-                                    </svg>
-                                    <span>Copy</span>
-                                </button>
-                            </div>
-                            <div class="config-content">
-                                <div class="text-green h5 m-0 font-monospace">sudo pacman -Sy</div>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Setup Instructions -->
+        <div class="flex-shrink-0 mb-0 text-center">
+            <h3 class="h6 text-uppercase text-primary fw-bold mb-3 letter-spacing-1">Installation</h3>
+            <div class="repo-config-box text-start mb-4 d-flex justify-content-between align-items-center"
+                id="install-step">
+                <div class="config-content">
+                    <span class="text-mauve">curl -sL </span>
+                    <span class="text-green">{{REPO_URL}}/install</span>
+                    <span class="text-mauve"> | sudo bash</span>
                 </div>
-                <!-- Controls -->
-                <button class="carousel-control-prev" type="button" data-bs-target="#setupCarousel" data-bs-slide="prev"
-                    style="width: 10%; opacity: 0.8;">
-                    <span class="carousel-control-prev-icon" aria-hidden="true" style="width: 1.2rem;"></span>
-                    <span class="visually-hidden">Previous</span>
+                <button class="copy-btn ms-2" onclick="copyInstallCmd()" aria-label="Copy command">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                        class="bi bi-copy" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd"
+                            d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z" />
+                    </svg>
                 </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#setupCarousel" data-bs-slide="next"
-                    style="width: 10%; opacity: 0.8;">
-                    <span class="carousel-control-next-icon" aria-hidden="true" style="width: 1.2rem;"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-                <!-- Indicators -->
-                <div class="carousel-indicators" style="bottom: -20px;">
-                    <button type="button" data-bs-target="#setupCarousel" data-bs-slide-to="0" class="active"
-                        aria-current="true" aria-label="Slide 1"></button>
-                    <button type="button" data-bs-target="#setupCarousel" data-bs-slide-to="1"
-                        aria-label="Slide 2"></button>
-                </div>
             </div>
         </div>
-
-        <style>
-            .bg-mauve {
-                background-color: var(--ctp-mauve);
-            }
-
-            .bg-green {
-                background-color: var(--ctp-green);
-            }
-
-            .carousel-indicators [data-bs-target] {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                background-color: var(--ctp-flamingo);
-                margin: 0 4px;
-            }
-
-            .carousel-control-prev-icon,
-            .carousel-control-next-icon {
-                filter: invert(1) grayscale(100%) brightness(2);
-            }
-
-            .copy-btn {
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: var(--ctp-subtext1);
-                padding: 4px 8px;
-                border-radius: 6px;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                display: flex;
-                align-items: center;
-                gap: 5px;
-                font-size: 0.75rem;
-                font-family: inherit;
-            }
-
-            .copy-btn:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: #fff;
-            }
-
-            .copy-btn:active {
-                transform: scale(0.95);
-            }
-
-            .time-separator {
-                opacity: 0.5;
-                font-size: 0.85em;
-                margin: 0 0.25rem;
-                font-weight: normal;
-            }
-        </style>
 
         <!-- Packages Section -->
         <main class="d-flex flex-column flex-grow-1 overflow-hidden">
             <h2
-                class="h6 text-uppercase text-primary fw-bold text-center mb-3 mt-2 mt-md-3 letter-spacing-1 flex-shrink-0">
+                class="h6 text-uppercase text-primary fw-bold text-center mb-4 mt-0 mt-md-1 letter-spacing-1 flex-shrink-0">
                 Available Packages
             </h2>
             <div class="table-responsive border border-light border-opacity-10 rounded shadow-sm flex-grow-1"
@@ -378,23 +319,32 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function copyConfig(step) {
-            let text = "";
-            if (step === 1) {
-                text = "sudo bash -c 'printf \"\\n[{{REPO_NAME}}]\\nSigLevel = Optional TrustAll\\nServer = {{REPO_URL}}/\\$arch\\n\" >> /etc/pacman.conf'";
-            } else if (step === 2) {
-                text = "sudo pacman -Sy";
-            }
+            function copyInstallCmd() {
+                const text = "curl -sL {{REPO_URL}}/install | sudo bash";
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = document.querySelector('#install-step .copy-btn');
+                    const originalHtml = btn.innerHTML;
 
-            navigator.clipboard.writeText(text).then(() => {
-                const btn = document.querySelector(`#config-step-${step} .copy-btn span`);
-                const originalText = btn.innerText;
-                btn.innerText = "Copied!";
+                    // Add animation clas
+                    btn.classList.add('animate-pop');
+
+                    // Show check icon
+                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="var(--ctp-green)" class="bi bi-check-lg" viewBox="0 0 16 16">
+                    <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+                </svg>`;
+
+                    // Remove animation class after it plays
+                    setTimeout(() => {
+                        btn.classList.remove('animate-pop');
+                    }, 300);
+
+                // Restore original icon after 2 seconds
                 setTimeout(() => {
-                    btn.innerText = originalText;
+                    btn.innerHTML = originalHtml;
                 }, 2000);
             });
         }
+
 
         // Localize timestamp
         document.addEventListener('DOMContentLoaded', () => {

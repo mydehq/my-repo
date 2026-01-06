@@ -1,0 +1,26 @@
+meta:
+  repo-name: mydehq
+  repo-url: https://mydehq.github.io/arch-repo
+  project-url: https://github.com/mydehq/arch-repo
+
+packages:
+  aur:
+    # Official projects
+    - name: myctl
+    - name: mytm
+    - name: nautilus-dummy
+    - name: nsticky-bin
+
+    # 3rd party
+    - name: kireisakura-kit
+    - name: mpv-mpris2-bin
+    - name: vicinae-bin
+    - name: app2unit
+    - name: catppuccin-cursors-macchiato
+    - name: vorta-root
+    - name: ttf-sil-abyssinica
+    - name: git-credential-keepassxc-bin
+    - name: catnap
+    - name: python-textual-fastdatatable-latest
+    - name: sqlit
+    - name: dumber-browser-bin
