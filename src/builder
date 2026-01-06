@@ -27,12 +27,21 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+: ${CI:=""}
+
 # Logging functions (MyTM style)
-log()         { echo -e "${BLUE}-${NC} $*"; }
-log.info()    { echo -e "${BLUE}i $* ${NC}"; }
-log.success() { echo -e "${GREEN}+ $* ${NC}"; }
-log.warn()    { echo -e "${YELLOW}! $* ${NC}"; }
-log.error()   { echo -e "${RED}x $* ${NC}" >&2; }
+log()         {
+    if [[ -n "$CI" ]]; then
+        echo -e "${BLUE}-${NC} $*" >&2
+    else
+        echo -e "  $*"
+    fi
+}
+
+log.info()    { echo -e "${BLUE}i $* ${NC}" >&2;   }
+log.success() { echo -e "${GREEN}+ $* ${NC}" >&2;  }
+log.warn()    { echo -e "${YELLOW}! $* ${NC}" >&2; }
+log.error()   { echo -e "${RED}x $* ${NC}" >&2;    }
 
 # Extract and install build dependencies
 install-pkg-deps() {
@@ -119,7 +128,7 @@ build-package() {
     local pkg_name="$1"
     local pkg_dir="${AUR_CLONE_DIR}/${pkg_name}"
     
-    echo ""
+    log
     log.info "Building ${pkg_name}..."
     
     pushd "$pkg_dir" > /dev/null
@@ -129,7 +138,7 @@ build-package() {
     
     # Build package
     if ! makepkg --noconfirm --nodeps --force; then
-        echo ""
+        log
         log.error "Build failed for ${pkg_name}"
         popd > /dev/null
         return 1
@@ -137,7 +146,7 @@ build-package() {
     
     popd > /dev/null
     
-    echo ""
+    log
 
     # Copy built packages to build directory
     local pkg_files
@@ -155,6 +164,9 @@ build-package() {
         # Cleanup artifact to keep cache clean
         rm -f "$pkg_file" || log.error "Failed to remove artifact: $(basename "$pkg_file")"
     done
+
+    # Cleanup temporary build directories
+    rm -rf "$pkg_dir/pkg" "$pkg_dir/src" || log.error "Failed to remove build artifacts"
 }
 
 # Add packages to repo database
@@ -176,9 +188,9 @@ update-repo-database() {
     
     popd > /dev/null
     
-    echo ""
+    log
     log.success "Repository database updated"
-    echo ""
+    log
 }
 
 
@@ -192,7 +204,7 @@ generate-landing-page() {
         return
     fi
     
-    echo ""
+    log
     log.info "Generating landing pages..."
     
     local package_rows=""
@@ -380,7 +392,7 @@ cleanup-repo() {
 
 # Main function
 main() {
-    echo ""
+    log
     log.warn "Starting AUR package build process\n"
     
     # Validate requirements
@@ -422,8 +434,8 @@ main() {
         pkg_name=$(yq ".packages[$i].name" "$PACKAGES_FILE")
         force_build=$(yq ".packages[$i].force // false" "$PACKAGES_FILE")
         
-        echo ""
-        log.info "Processing package: ${pkg_name}"
+        log
+        log.info "Processing package: ${YELLOW}${pkg_name}${NC}"
         
         # Clone/update from AUR
         if ! clone-aur-package "$pkg_name"; then
@@ -463,11 +475,11 @@ main() {
             else
                 ((failed_count++)) || true
             fi
-            echo ""
+            log
         fi
     done
 
-    echo ""
+    log
     
     # Update repo database if any packages were built
     if [[ $built_count -gt 0 ]]; then
@@ -484,20 +496,20 @@ main() {
     generate-landing-page
     
     # Summary
-    echo ""
+    log
     log.info    "Build Summary:"
     log.success "   Built:   ${built_count}"
     log.warn    "   Skipped: ${skipped_count}"
     log.error   "   Failed:  ${failed_count}"
 
-    echo ""
+    log
     if [[ $failed_count -gt 0 ]]; then
         log.error "Build failed for ${failed_count} packages"
-        echo ""
+        log
         exit 1
     else
         log.success "Build completed successfully"
-        echo ""
+        log
     fi
 }
 
