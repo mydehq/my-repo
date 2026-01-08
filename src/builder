@@ -519,7 +519,7 @@ migrate-database() {
         if [[ -e "$old_db_link" || -L "$old_db_link" ]]; then
             rm -f "$old_db_link"
             ln -s "$db_file" "${build_arch_dir}/${REPO_NAME}.db"
-            log "   Updated DB symlink: ${REPO_NAME}.db"
+            log "   Updated DB symlink: ${old_base}.db -> ${REPO_NAME}.db"
         fi
 
         if [[ -f "$old_files" ]]; then
@@ -530,7 +530,7 @@ migrate-database() {
              if [[ -e "$old_files_link" || -L "$old_files_link" ]]; then
                 rm -f "$old_files_link"
                 ln -s "$files_file" "${build_arch_dir}/${REPO_NAME}.files"
-                log "   Updated Files symlink: ${REPO_NAME}.files"
+                log "   Updated Files symlink: ${old_base}.files -> ${REPO_NAME}.files"
              fi
         fi
         
