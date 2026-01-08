@@ -38,7 +38,7 @@ REPO_NAME=""
 REPO_URL=""
 PROJECT_URL=""
 
-# State tracking
+declare -A REMOTE_VERSIONS
 BUILT_PKG_FILES=()
 
 : "${CI:=""}"
@@ -119,6 +119,33 @@ get-aur-version() {
 }
 
 
+# Fetch remote versions for multiple packages using AUR RPC API
+fetch-aur-versions() {
+    local packages=("$@")
+    
+    if [[ ${#packages[@]} -eq 0 ]]; then
+        return 0
+    fi
+    
+    # Construct query string
+    local query_args=""
+    for pkg in "${packages[@]}"; do
+        query_args+="&arg[]=${pkg}"
+    done
+
+    # Call AUR API
+    local url="${AUR_BASE_URL}/rpc/?v=5&type=info${query_args}"
+    local json_response
+    
+    if ! json_response=$(curl -sL --fail --max-time 10 "$url"); then
+        log.error "Failed to contact AUR API"
+        return 1
+    fi
+
+    # Parse JSON with jq to output "pkgname:version" lines
+    echo "$json_response" | jq -r '.results[]? | "\(.Name):\(.Version)"' 2>/dev/null
+}
+
 # Clone or update AUR package
 clone-aur-package() {
     local pkg_name="$1"
@@ -154,7 +181,8 @@ build-package() {
     fi
 
     # Build package
-    if ! makepkg --noconfirm --nodeps --force 2>&1 | sed 's/^/   /'; then
+    # Use --clean to automatically clean up src/pkg directories
+    if ! makepkg --noconfirm --nodeps --force --clean 2>&1 | sed 's/^/   /'; then
         log
         log.error "Build failed for ${pkg_name}: Makepkg returned error."
         popd > /dev/null
@@ -184,9 +212,6 @@ build-package() {
         # Cleanup artifact to keep cache clean
         rm -f "$pkg_file" || log.error "Failed to remove artifact: $(basename "$pkg_file")"
     done
-
-    # Cleanup temporary build directories
-    rm -rf "$pkg_dir/pkg" "$pkg_dir/src" || log.error "Failed to remove build artifacts"
 }
 
 # Add packages to repo database
@@ -206,8 +231,15 @@ update-repo-database() {
 
     pushd "$build_arch_dir" > /dev/null
 
+    # Remove stale lock if it exists and is old
+    local lock_file="${db_file}.lck"
+
+    if [[ -f "$lock_file" ]]; then
+         log.warn "Removing stale lock file: $lock_file"
+         rm -f "$lock_file"
+    fi
+
     # Add specific packages to the database
-    # repo-add handles multiple arguments
     if ! repo-add "$db_file" "${packages[@]}" 2>&1 | sed 's/^/    /'; then
         log.error "Failed to update database"
         popd > /dev/null
@@ -576,6 +608,15 @@ main() {
             exit 1
         }
     fi
+    
+    if ! command -v jq &> /dev/null; then
+        log.info "jq not found, installing..."
+        
+        sudo pacman -S --needed --noconfirm jq || {
+            log.error "Failed to install jq"
+            exit 1
+        }
+    fi
 
     if ! command -v makepkg &> /dev/null; then
         log.error "makepkg is required but not installed (should be in base-devel)"
@@ -619,6 +660,20 @@ main() {
     pkg_count=$(yq '.packages.aur | length' "$PACKAGES_FILE")
     log.info "Found ${pkg_count} packages in ${PACKAGES_FILE}"
 
+    # Pre-fetch package names to array
+    local package_names=()
+
+    for ((i=0; i<pkg_count; i++)); do
+        package_names+=("$(yq ".packages.aur[$i].name" "$PACKAGES_FILE")")
+    done
+
+    # Batch fetch versions from AUR
+    log.info "Fetching upstream versions from AUR..."
+
+    while IFS=":" read -r key value; do
+        REMOTE_VERSIONS["$key"]="$value"
+    done < <(fetch-aur-versions "${package_names[@]}")
+
     local skipped_count=0
     local failed_count=0
 
@@ -633,32 +688,33 @@ main() {
         log
         log.info "Processing package: ${YELLOW}${pkg_name}${NC}"
 
-        # Clone/update from AUR
-        if ! clone-aur-package "$pkg_name"; then
-            log.error "Failed to clone ${pkg_name}"
-            ((failed_count++))
-            continue
-        fi
-
-        local repo_version aur_version
+        local repo_version aur_version needs_build=false
 
         repo_version=$(get-repo-version "$pkg_name")
-        aur_version=$(get-aur-version "${AUR_CLONE_DIR}/${pkg_name}")
+        aur_version="${REMOTE_VERSIONS[$pkg_name]:-}"
 
-        log "     AUR  version: ${aur_version}"
+        log "     AUR  version: ${aur_version:-<unknown>}"
         log "     Repo version: ${repo_version:-<not in repo>}"
 
-        # Determine if we need to build
-        local needs_build=false
-
-        if [[ -z "$repo_version" ]]; then
-            log.warn "Package not in repo, building..."
+        if [[ -z "$aur_version" ]]; then
+            if [[ -n "$repo_version" ]]; then
+                log.warn "Could not get version from AUR API (package might be deleted or private). Keeping repo version."
+                if [[ -z "$repo_version" ]]; then
+                    log.warn "Package missing from both repo and API. Still attempting clone..."
+                    needs_build=true
+                fi
+            else
+                log.warn "Package not found in AUR API."
+                needs_build=true
+            fi
+        elif [[ -z "$repo_version" ]]; then
+            log.warn "Package not in repo, downloading..."
             needs_build=true
         elif [[ "$repo_version" != "$aur_version" ]]; then
-            log.warn "Version mismatch, building..."
+            log.warn "Version mismatch, updating..."
             needs_build=true
         elif [[ "$force_build" == "true" ]]; then
-            log.warn "Force flag set, building..."
+            log.warn "Force flag set, rebuilding..."
             needs_build=true
         else
             # Check if exists in build dir
@@ -679,6 +735,12 @@ main() {
         fi
 
         if [[ "$needs_build" == "true" ]]; then
+            if ! clone-aur-package "$pkg_name"; then
+                log.error "Failed to clone ${pkg_name}"
+                ((failed_count++))
+                continue
+            fi
+            
             if ! build-package "$pkg_name"; then
                 ((failed_count++)) || true
             fi
