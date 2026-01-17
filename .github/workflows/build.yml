@@ -34,6 +34,11 @@ jobs:
       GOMODCACHE: ${{ github.workspace }}/.go/mod
 
     steps:
+      - name: Install Dependencies
+        run: |
+          # Install git & other deps
+          pacman -Syu --noconfirm --needed base-devel git go-yq diffutils
+
       - name: Cache Build Dependencies
         uses: actions/cache@v4
         with:
@@ -56,8 +61,6 @@ jobs:
 
       - name: Configure Git
         run: |
-          # Install git & other deps
-          pacman -Syu --noconfirm --needed base-devel git go-yq diffutils
 
           git config --global user.name "Soumadip Das"
           git config --global user.email "84225810+soymadip@users.noreply.github.com"
