@@ -13,6 +13,7 @@ packages:
 
     # 3rd party
     - name: kireisakura-kit
+    - name: dms-shell-bin
     - name: mpv-mpris2-bin
     - name: vicinae-bin
     - name: app2unit
