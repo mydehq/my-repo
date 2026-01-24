@@ -10,6 +10,7 @@ packages:
     - name: mytm
     - name: nautilus-dummy
     - name: nsticky-bin
+    - name: autotitle
 
     # 3rd party
     - name: kireisakura-kit
