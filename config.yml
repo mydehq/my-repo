@@ -23,5 +23,5 @@ packages:
     - name: ttf-sil-abyssinica
     - name: git-credential-keepassxc-bin
     - name: catnap
-    - name: python-textual-fastdatatable-latest
+    - name: python-textual-fastdatatable
     - name: sqlit
