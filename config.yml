@@ -15,7 +15,11 @@ packages:
     # 3rd party
     - name: kireisakura-kit
     - name: dms-shell-bin
+    
     - name: mpv-mpris2-bin
+    - name: mpv-modernx
+    - name: mpv-thumbfast-git
+    
     - name: vicinae-bin
     - name: app2unit
     - name: catppuccin-cursors-macchiato
