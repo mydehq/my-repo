@@ -10,10 +10,16 @@ packages:
     - name: mytm
     - name: nautilus-dummy
     - name: nsticky-bin
+    - name: autotitle
 
     # 3rd party
     - name: kireisakura-kit
+    - name: dms-shell-bin
+    
     - name: mpv-mpris2-bin
+    - name: mpv-modernx
+    - name: mpv-thumbfast-git
+    
     - name: vicinae-bin
     - name: app2unit
     - name: catppuccin-cursors-macchiato
@@ -21,5 +27,5 @@ packages:
     - name: ttf-sil-abyssinica
     - name: git-credential-keepassxc-bin
     - name: catnap
-    - name: python-textual-fastdatatable-latest
+    - name: python-textual-fastdatatable
     - name: sqlit
