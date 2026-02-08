@@ -67,10 +67,16 @@ install-pkg-deps() {
     makedeps=$(bash -c "source $pkgbuild && echo \${makedepends[@]}" | xargs)
 
     if [[ -n "$makedeps" ]]; then
-        log "  Installing: $makedeps"
-        if ! sudo pacman -S --noconfirm --needed $makedeps; then
-            log.error "Failed to install build dependencies"
-            return 1
+        # Check if dependencies are already satisfied
+        local missing_deps
+        if missing_deps=$(pacman -T $makedeps); then
+            log "  Build dependencies already satisfied"
+        else
+            log "  Installing missing dependencies: $missing_deps"
+            if ! sudo pacman -S --noconfirm --needed $missing_deps; then
+                log.error "Failed to install build dependencies"
+                return 1
+            fi
         fi
     else
         log.info "No build dependencies found"
