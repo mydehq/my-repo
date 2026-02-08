@@ -70,9 +70,9 @@ install-pkg-deps() {
         # Check if dependencies are already satisfied
         local missing_deps
         if missing_deps=$(pacman -T $makedeps); then
-            log "  Build dependencies already satisfied"
+            log.info "  Build dependencies already satisfied"
         else
-            log "  Installing missing dependencies: $missing_deps"
+            log.info "  Installing missing dependencies: $missing_deps"
             if ! sudo pacman -S --noconfirm --needed $missing_deps; then
                 log.error "Failed to install build dependencies"
                 return 1
@@ -97,31 +97,48 @@ get-repo-version() {
 
     # Extract version from repo database
     local version
-    version=$(tar -tzf "$db_file" 2>/dev/null | grep "^${pkg_name}-[^-]\+-[^-]\+/desc$" | head -1 | sed "s|^${pkg_name}-\(.*\)/desc$|\1|") || true
+    version=$(tar -tzf "$db_file" 2>/dev/null \
+        | grep "^${pkg_name}-[^-]\+-[^-]\+/desc$" \
+        | head -1 \
+        | sed "s|^${pkg_name}-\(.*\)/desc$|\1|") || true
+
     echo "$version"
 }
 
-# Get version from AUR PKGBUILD
-get-aur-version() {
-    local pkg_dir="$1"
-    local pkgbuild="${pkg_dir}/PKGBUILD"
-
-    if [[ ! -f "$pkgbuild" ]]; then
-        return
-    fi
-
-    # Source PKGBUILD in subshell to get version info
-    (
-        # shellcheck disable=SC1090
-        source "$pkgbuild"
-
-        if [[ -n "${epoch:-}" ]]; then
-            # shellcheck disable=SC2154
-            echo "${epoch}:${pkgver}-${pkgrel}"
-        else
-            echo "${pkgver}-${pkgrel}"
+# Get actual version from AUR package
+get-actual-aur-version() {
+    local pkg_name="$1"
+    
+    # For git packages, always check for new commits
+    if [[ "$pkg_name" == *-git ]]; then
+        # Clone/update the package
+        if ! clone-aur-package "$pkg_name" &>/dev/null; then
+            echo ""
+            return
         fi
-    )
+
+        local pkg_dir="${AUR_CLONE_DIR}/${pkg_name}"
+        local pkgbuild="${pkg_dir}/PKGBUILD"
+
+        if [[ ! -f "$pkgbuild" ]]; then
+            return
+        fi
+
+        # Source PKGBUILD in subshell to get version info
+        (
+            # shellcheck disable=SC1090
+            source "$pkgbuild"
+
+            if [[ -n "${epoch:-}" ]]; then
+                # shellcheck disable=SC2154
+                echo "${epoch}:${pkgver}-${pkgrel}"
+            else
+                echo "${pkgver}-${pkgrel}"
+            fi
+        )
+    else
+        echo ""
+    fi
 }
 
 
@@ -738,8 +755,18 @@ main() {
 
         local repo_version aur_version needs_build=false
 
-        repo_version=$(get-repo-version "$pkg_name")
+        repo_version="$(get-repo-version "$pkg_name")"
         aur_version="${REMOTE_VERSIONS[$pkg_name]:-}"
+        
+        # For git packages, get actual version by cloning and running pkgver()
+        if [[ "$pkg_name" == *-git ]]; then
+            local actual_version
+            actual_version="$(get-actual-aur-version "$pkg_name")"
+            
+            if [[ -n "$actual_version" ]]; then
+                aur_version="$actual_version"
+            fi
+        fi
 
         log "     AUR  version: ${aur_version:-<unknown>}"
         log "     Repo version: ${repo_version:-<not in repo>}"
