@@ -439,7 +439,31 @@ _cleanup_repo() {
 
     pushd "$build_arch_dir" > /dev/null
 
-    # Iterate through ALL files to catch junk
+    # Track latest version of each package
+    declare -A latest_pkg_files
+
+    # First pass: identify latest version of each package
+    for pkg_file in *.pkg.tar.{zst,xz}; do
+        [[ -f "$pkg_file" ]] || continue
+
+        local base="${pkg_file%.pkg.tar*}"    # Remove extension
+        local temp="${base%-*}"               # Remove -ARCH
+        temp="${temp%-*}"                     # Remove -RELEASE
+        local extracted_name="${temp%-*}"     # Remove -VERSION
+
+        # Only track valid packages
+        if echo "$valid_pkgs" | grep -qx "$extracted_name"; then
+            # If we haven't seen this package yet, or this file is newer
+            if [[ -z "${latest_pkg_files[$extracted_name]:-}" ]] || \
+               [[ "$pkg_file" -nt "${latest_pkg_files[$extracted_name]:-}" ]]; then
+                latest_pkg_files["$extracted_name"]="$pkg_file"
+            fi
+        fi
+    done
+
+    # Second pass: remove old versions and invalid packages
+    declare -A pkgs_to_remove_from_db
+    
     for pkg_file in *; do
         [[ -f "$pkg_file" ]] || continue
 
@@ -467,23 +491,41 @@ _cleanup_repo() {
         fi
 
         local is_valid_pkg=false
+        local is_latest_version=false
 
         if [[ "$is_valid_artifact" == "true" ]]; then
             if echo "$valid_pkgs" | grep -qx "$extracted_name"; then
                 is_valid_pkg=true
+                # Check if this is the latest version
+                if [[ "${latest_pkg_files[$extracted_name]:-}" == "$pkg_file" ]]; then
+                    is_latest_version=true
+                fi
             fi
         fi
 
-        if [[ "$is_valid_pkg" == "false" ]]; then
+        # Remove if: not a valid package, OR valid but not the latest version
+        if [[ "$is_valid_pkg" == "false" ]] || [[ "$is_latest_version" == "false" ]]; then
              if [[ "$is_valid_artifact" == "true" ]]; then
-                 log.warn "     Removing stale artifact: $pkg_file (extracted: $extracted_name)"
-                 repo-remove "$db_file" "${extracted_name}" 2>/dev/null || true
+                 if [[ "$is_latest_version" == "false" ]] && [[ "$is_valid_pkg" == "true" ]]; then
+                     log.warn "     Removing old version: $pkg_file"
+                     # Mark package for database removal (will do it once later)
+                     pkgs_to_remove_from_db["$extracted_name"]=1
+                 else
+                     log.warn "     Removing stale artifact: $pkg_file (extracted: $extracted_name)"
+                     pkgs_to_remove_from_db["$extracted_name"]=1
+                 fi
              else
                  log.warn "     Removing junk file: $pkg_file"
              fi
              rm -f "$pkg_file"
         fi
     done
+    
+    # Remove packages from database (once per package, not per file)
+    for pkg_name in "${!pkgs_to_remove_from_db[@]}"; do
+        repo-remove "$db_file" "$pkg_name" 2>/dev/null || true
+    done
+    
     rm -rf *.old
 
     popd > /dev/null
