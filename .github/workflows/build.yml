@@ -34,15 +34,10 @@ jobs:
       GOMODCACHE: ${{ github.workspace }}/.go/mod
 
     steps:
-      - name: Install Dependencies
-        run: |
-          # Install git, git-lfs & other deps
-          pacman -Syu --noconfirm --needed base-devel git git-lfs go-yq diffutils
-
       - name: Cache Build Dependencies
         uses: actions/cache@v4
         with:
-          key: deps-${{ runner.os }}-${{ github.run_id }}
+          key: deps-${{ runner.os }}-${{ github.sha }}
           restore-keys: deps-${{ runner.os }}-
           path: |
             /var/cache/pacman/pkg
@@ -53,6 +48,11 @@ jobs:
             ${{ env.CARGO_TARGET_DIR }}/
             ${{ env.GOCACHE }}/
             ${{ env.GOMODCACHE }}/
+
+      - name: Install Dependencies
+        run: |
+          # Install git, git-lfs & other deps
+          pacman -Syu --noconfirm --needed base-devel git git-lfs go-yq diffutils
 
       - name: Checkout main branch
         uses: actions/checkout@v4
