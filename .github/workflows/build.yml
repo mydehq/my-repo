@@ -51,8 +51,11 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # Install git, git-lfs & other deps
-          pacman -Syu --noconfirm --needed base-devel git git-lfs go-yq diffutils
+          # Sync database 
+          pacman -Sy
+
+          # Install git, git-lfs & other deps (only if missing/outdated)
+          pacman -S --noconfirm --needed base-devel git git-lfs go-yq diffutils
 
       - name: Checkout main branch
         uses: actions/checkout@v4
