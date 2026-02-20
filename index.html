@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>MyDE | Arch Repository</title>
+        <meta name="description" content="Automated AUR package builds." />
+        <meta name="theme-color" content="#1e1e2e" />
+        <link rel="icon" type="image/png" href="./icon.png" />
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --ctp-flamingo: #eba0ac;
+                --ctp-mauve: #cba6f7;
+                --ctp-maroon: #fab387;
+                --ctp-sapphire: #74c7ec;
+                --ctp-green: #a6e3a1;
+                --ctp-blue: #89b4fa;
+
+                --bs-primary: var(--ctp-maroon);
+                --bs-primary-rgb: 235, 160, 172;
+                --bs-body-font-family: "Inter", sans-serif;
+                --bs-body-bg: #1e1e2e;
+                --bs-body-bg-rgb: 30, 30, 46;
+            }
+
+            .text-primary {
+                color: var(--bs-primary) !important;
+            }
+
+            .text-mauve {
+                color: var(--ctp-mauve) !important;
+            }
+
+            .text-sapphire {
+                color: var(--ctp-sapphire) !important;
+            }
+
+            .text-green {
+                color: var(--ctp-green) !important;
+            }
+
+            .text-blue {
+                color: var(--ctp-blue) !important;
+            }
+
+            .navbar {
+                background-color: rgba(30, 30, 46, 0.95);
+                backdrop-filter: blur(10px);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+
+            /* Custom Scrollbar */
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 4px;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: rgba(var(--bs-primary-rgb), 0.3);
+                border-radius: 4px;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: rgba(var(--bs-primary-rgb), 0.6);
+            }
+
+            .repo-config-box {
+                background-color: #181825;
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 14px;
+                padding: 1.75rem;
+                font-family: "JetBrains Mono", "Fira Code", monospace;
+                font-size: 0.95rem;
+                margin: 0 6rem;
+                transition: transform 0.2s ease;
+            }
+
+            .package-name {
+                font-weight: 600;
+                color: var(--ctp-mauve);
+                transition:
+                    color 0.2s ease,
+                    text-decoration 0.2s ease;
+            }
+
+            .package-name:hover {
+                color: var(--bs-primary);
+                text-decoration: underline !important;
+            }
+
+            .badge-version {
+                background-color: rgba(var(--bs-primary-rgb), 0.08);
+                color: var(--bs-primary);
+                font-family: monospace;
+                font-size: 0.85rem;
+                padding: 0.4em 0.8em;
+                border: 1px solid rgba(var(--bs-primary-rgb), 0.15);
+                transition: all 0.2s ease;
+            }
+
+            .badge-version:hover {
+                background-color: rgba(var(--bs-primary-rgb), 0.15);
+                border-color: rgba(var(--bs-primary-rgb), 0.3);
+            }
+
+            /* Table Hover Effect */
+            .table-hover tbody tr:hover {
+                background-color: rgba(255, 255, 255, 0.02) !important;
+                transition: background-color 0.2s ease;
+            }
+
+            .stat-card {
+                padding: 1rem 0;
+                transition: transform 0.2s ease;
+            }
+
+            .stat-card:hover {
+                transform: translateY(-3px);
+            }
+
+            .stat-header {
+                font-size: 0.75rem;
+                letter-spacing: 0.08em;
+                color: rgba(255, 255, 255, 0.4) !important;
+                text-transform: uppercase;
+                font-weight: 700;
+            }
+
+            .stat-value {
+                font-size: 1.25rem;
+                font-weight: 700;
+                display: block;
+                margin-top: 0.25rem;
+            }
+
+            .letter-spacing-1 {
+                letter-spacing: 0.12em;
+            }
+
+            .bg-mauve {
+                background-color: var(--ctp-mauve);
+            }
+
+            .bg-green {
+                background-color: var(--ctp-green);
+            }
+
+            .carousel-indicators [data-bs-target] {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background-color: var(--ctp-flamingo);
+                margin: 0 4px;
+            }
+
+            .carousel-control-prev-icon,
+            .carousel-control-next-icon {
+                filter: invert(1) grayscale(100%) brightness(2);
+            }
+
+            .copy-btn {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                color: var(--ctp-subtext1);
+                padding: 4px 8px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 0.75rem;
+                font-family: inherit;
+            }
+
+            .copy-btn:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: #fff;
+            }
+
+            .copy-btn:active {
+                transform: scale(0.95);
+            }
+
+            .time-separator {
+                opacity: 0.5;
+                font-size: 0.85em;
+                margin: 0 0.25rem;
+                font-weight: normal;
+            }
+
+            .config-content {
+                overflow-x: auto;
+                white-space: nowrap;
+                flex-grow: 1;
+                /* Hide scrollbar */
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+
+            .config-content::-webkit-scrollbar {
+                display: none;
+            }
+
+            @keyframes pop {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.15);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+
+            .animate-pop {
+                animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+        </style>
+    </head>
+
+    <body class="d-flex flex-column vh-100 overflow-hidden">
+        <!-- Navbar -->
+        <nav class="navbar navbar-expand-lg sticky-top py-3 flex-shrink-0">
+            <div class="container" style="max-width: 900px">
+                <a
+                    class="navbar-brand d-flex align-items-center gap-3 fw-bold text-primary"
+                    href="#"
+                >
+                    <img
+                        src="./icon.png"
+                        alt="Logo"
+                        width="32"
+                        height="32"
+                        class="rounded shadow-sm"
+                    />
+                    <span id="navbar-title"
+                        >MyDE
+                        <span class="text-secondary opacity-50 mx-2">/</span>
+                        <span class="fw-normal opacity-75">Arch Repo</span></span
+                    >
+                </a>
+                <a
+                    class="nav-link fw-bold text-primary ms-auto d-flex align-items-center gap-2"
+                    href="https://github.com/mydehq/my-repo"
+                    target="_blank"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        fill="currentColor"
+                        class="bi bi-github"
+                        viewBox="0 0 16 16"
+                    >
+                        <path
+                            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"
+                        />
+                    </svg>
+                    <span class="d-none d-md-inline">Source Code</span>
+                </a>
+            </div>
+        </nav>
+
+        <div
+            class="container flex-grow-1 d-flex flex-column pt-5 pb-3 overflow-hidden"
+            style="max-width: 900px"
+        >
+            <!-- Repository Info Stats -->
+            <div
+                class="row g-3 mb-5 pb-3 border-bottom border-light border-opacity-10 text-center flex-shrink-0"
+            >
+                <div
+                    class="col-4 stat-card border-end border-light border-opacity-10"
+                >
+                    <span class="stat-header">Packages</span>
+                    <span class="stat-value text-sapphire"
+                        >20</span
+                    >
+                </div>
+                <div
+                    class="col-4 stat-card border-end border-light border-opacity-10"
+                >
+                    <span class="stat-header">Repo Name</span>
+                    <span class="stat-value text-mauve">my-repo</span>
+                </div>
+                <div class="col-4 stat-card">
+                    <span class="stat-header">Last Updated</span>
+                    <span class="stat-value text-green" id="last-updated">2026-02-19T21:09+00:00</span>
+                </div>
+            </div>
+
+            <!-- Setup Instructions -->
+            <div class="flex-shrink-0 mb-0 text-center">
+                <h3
+                    class="h6 text-uppercase text-primary fw-bold mb-3 letter-spacing-1"
+                >
+                    Installation
+                </h3>
+                <div
+                    class="repo-config-box text-start mb-4 d-flex justify-content-between align-items-center"
+                    id="install-step"
+                >
+                    <div class="config-content">
+                        <span class="text-mauve">curl -sL </span>
+                        <span class="text-green">https://mydehq.github.io/my-repo/install</span>
+                        <span class="text-mauve"> | bash</span>
+                    </div>
+                    <button
+                        class="copy-btn ms-2"
+                        onclick="copyInstallCmd()"
+                        aria-label="Copy command"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            fill="currentColor"
+                            class="bi bi-copy"
+                            viewBox="0 0 16 16"
+                        >
+                            <path
+                                fill-rule="evenodd"
+                                d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z"
+                            />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Packages Section -->
+            <main class="d-flex flex-column flex-grow-1 overflow-hidden">
+                <h2
+                    class="h6 text-uppercase text-primary fw-bold text-center mb-4 mt-0 mt-md-1 letter-spacing-1 flex-shrink-0"
+                >
+                    Available Packages
+                </h2>
+                <div
+                    class="table-responsive border border-light border-opacity-10 rounded shadow-sm flex-grow-1"
+                    style="overflow-y: auto; min-height: 0"
+                >
+                    <table class="table table-hover align-middle mb-0">
+                        <thead
+                            class="sticky-top"
+                            style="
+                                background-color: var(--bs-body-bg);
+                                z-index: 10;
+                            "
+                        >
+                            <tr>
+                                <th
+                                    scope="col"
+                                    class="py-3 ps-3 text-primary text-uppercase small border-primary border-bottom-2"
+                                    style="background-color: var(--bs-body-bg)"
+                                >
+                                    Package Name
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="py-3 text-center text-primary text-uppercase small border-primary border-bottom-2"
+                                    style="background-color: var(--bs-body-bg)"
+                                >
+                                    Latest Version
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="py-3 pe-3 text-end text-primary text-uppercase small border-primary border-bottom-2"
+                                    style="background-color: var(--bs-body-bg)"
+                                >
+                                    Arch
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/myctl' target='_blank' class='package-name text-decoration-none'>myctl</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>1.11.2-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/mytm' target='_blank' class='package-name text-decoration-none'>mytm</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.0.0-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/nautilus-dummy' target='_blank' class='package-name text-decoration-none'>nautilus-dummy</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>1.1-2</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/nsticky-bin' target='_blank' class='package-name text-decoration-none'>nsticky-bin</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.1.0-2</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/autotitle' target='_blank' class='package-name text-decoration-none'>autotitle</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>1.9.0-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/kireisakura-kit' target='_blank' class='package-name text-decoration-none'>kireisakura-kit</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.10.2-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/dms-shell-bin' target='_blank' class='package-name text-decoration-none'>dms-shell-bin</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>1.4.1-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/mpv-mpris2-bin' target='_blank' class='package-name text-decoration-none'>mpv-mpris2-bin</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.0.6-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/mpv-modernx' target='_blank' class='package-name text-decoration-none'>mpv-modernx</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.4.5-2</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/mpv-thumbfast-git' target='_blank' class='package-name text-decoration-none'>mpv-thumbfast-git</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>r131.9deb073-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/ireader-bin' target='_blank' class='package-name text-decoration-none'>ireader-bin</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>2.0.13-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/vicinae-bin' target='_blank' class='package-name text-decoration-none'>vicinae-bin</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.19.9-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/app2unit' target='_blank' class='package-name text-decoration-none'>app2unit</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>1.3.0-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/catppuccin-cursors-macchiato' target='_blank' class='package-name text-decoration-none'>catppuccin-cursors-macchiato</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>2.0.0-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/vorta-root' target='_blank' class='package-name text-decoration-none'>vorta-root</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.0.1-4</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/ttf-sil-abyssinica' target='_blank' class='package-name text-decoration-none'>ttf-sil-abyssinica</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>2.100-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/git-credential-keepassxc-bin' target='_blank' class='package-name text-decoration-none'>git-credential-keepassxc-bin</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.14.1-2</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/catnap' target='_blank' class='package-name text-decoration-none'>catnap</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>1.1.1-3</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/python-textual-fastdatatable' target='_blank' class='package-name text-decoration-none'>python-textual-fastdatatable</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>0.14.0-2</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr><tr><td class='ps-3'><a href='https://aur.archlinux.org/packages/sqlit' target='_blank' class='package-name text-decoration-none'>sqlit</a></td><td class='text-center'><span class='badge rounded-pill badge-version'>1.3.1-1</span></td><td class='text-end pe-3 text-secondary'>x86_64</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            function copyInstallCmd() {
+                const text = "curl -sL https://mydehq.github.io/my-repo/install | bash";
+                navigator.clipboard.writeText(text).then(() => {
+                    const btn = document.querySelector(
+                        "#install-step .copy-btn",
+                    );
+                    const originalHtml = btn.innerHTML;
+
+                    // Add animation clas
+                    btn.classList.add("animate-pop");
+
+                    // Show check icon
+                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="var(--ctp-green)" class="bi bi-check-lg" viewBox="0 0 16 16">
+                    <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+                </svg>`;
+
+                    // Remove animation class after it plays
+                    setTimeout(() => {
+                        btn.classList.remove("animate-pop");
+                    }, 300);
+
+                    // Restore original icon after 2 seconds
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                    }, 2000);
+                });
+            }
+
+            // Localize timestamp
+            document.addEventListener("DOMContentLoaded", () => {
+                const lastUpdatedEl = document.getElementById("last-updated");
+                if (lastUpdatedEl) {
+                    const isoDate = lastUpdatedEl.innerText.trim();
+                    const date = new Date(isoDate);
+                    if (!isNaN(date)) {
+                        const dateStr = date.toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "2-digit",
+                            year: "numeric",
+                        });
+                        const timeStr = date.toLocaleTimeString(undefined, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                        });
+                        lastUpdatedEl.innerHTML = `${dateStr} <span class="time-separator">@</span> ${timeStr}`;
+                    }
+                }
+            });
+        </script>
+    </body>
+</html>
