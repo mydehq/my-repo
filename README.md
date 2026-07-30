@@ -10,6 +10,9 @@
 
 ## Installation
 
+> [!WARNING]
+> This repository is x86_64 only.
+
 Run the following command to add the repository:
 
 ```sh

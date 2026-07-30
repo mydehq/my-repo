@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>MyDE | Arch Repository</title>
+        <title>{repo_name} | Arch Repository</title>
         <meta name="description" content="Automated AUR package builds." />
         <meta name="theme-color" content="#1e1e2e" />
         <link rel="icon" type="image/png" href="./icon.png" />
@@ -258,7 +258,7 @@
                 </a>
                 <a
                     class="nav-link fw-bold text-primary ms-auto d-flex align-items-center gap-2"
-                    href="{{PROJECT_URL}}"
+                    href="{project_url}"
                     target="_blank"
                 >
                     <svg
@@ -291,18 +291,18 @@
                 >
                     <span class="stat-header">Packages</span>
                     <span class="stat-value text-sapphire"
-                        >{{PACKAGE_COUNT}}</span
+                        >{package_count}</span
                     >
                 </div>
                 <div
                     class="col-4 stat-card border-end border-light border-opacity-10"
                 >
                     <span class="stat-header">Repo Name</span>
-                    <span class="stat-value text-mauve">{{REPO_NAME}}</span>
+                    <span class="stat-value text-mauve">{repo_name}</span>
                 </div>
                 <div class="col-4 stat-card">
                     <span class="stat-header">Last Updated</span>
-                    <span class="stat-value text-green" id="last-updated">{{LAST_UPDATED}}</span>
+                    <span class="stat-value text-green" id="last-updated">{last_updated}</span>
                 </div>
             </div>
 
@@ -319,7 +319,7 @@
                 >
                     <div class="config-content">
                         <span class="text-mauve">curl -sL </span>
-                        <span class="text-green">{{REPO_URL}}/install</span>
+                        <span class="text-green">{repo_url}/install</span>
                         <span class="text-mauve"> | bash</span>
                     </div>
                     <button
@@ -388,7 +388,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{PACKAGE_ROWS}}
+                            {package_rows}
                         </tbody>
                     </table>
                 </div>
@@ -398,7 +398,7 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
         <script>
             function copyInstallCmd() {
-                const text = "curl -sL {{REPO_URL}}/install | bash";
+                const text = "curl -sL {repo_url}/install | bash";
                 navigator.clipboard.writeText(text).then(() => {
                     const btn = document.querySelector(
                         "#install-step .copy-btn",

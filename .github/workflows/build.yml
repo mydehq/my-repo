@@ -5,14 +5,19 @@ on:
     branches: [main]
     paths:
       - .github/workflows/build.yml
-      - config.yml
+      - config.json
+      - builder/**
       - src/**
 
   schedule:
-    # Run every 8 hours (00:00, 08:00, 16:00 UTC)
     - cron: "47 */8 * * *"
 
   workflow_dispatch:
+    inputs:
+      packages:
+        description: "JSON array or space-separated package names (Leave empty for auto-detection)"
+        required: false
+        default: ""
 
   repository_dispatch:
     types: [trigger-build]
@@ -30,121 +35,140 @@ jobs:
     container:
       image: archlinux:latest
 
-    env:
-      CARGO_HOME: ${{ github.workspace }}/.cargo
-      CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo/target
-      GOCACHE: ${{ github.workspace }}/.go/cache
-      GOMODCACHE: ${{ github.workspace }}/.go/mod
-
     steps:
-      - name: Cache Build Dependencies
-        uses: actions/cache@v4
-        with:
-          key: deps-${{ runner.os }}-${{ github.sha }}
-          restore-keys: deps-${{ runner.os }}-
-          path: |
-            /var/cache/pacman/pkg
-            aur
-            ${{ env.CARGO_HOME }}/registry/index/
-            ${{ env.CARGO_HOME }}/registry/cache/
-            ${{ env.CARGO_HOME }}/git/db/
-            ${{ env.CARGO_TARGET_DIR }}/
-            ${{ env.GOCACHE }}/
-            ${{ env.GOMODCACHE }}/
-
-      - name: Install Dependencies
+      - name: Install System Dependencies
         run: |
-          # Sync database 
-          pacman -Sy
+          pacman -Sy --noconfirm --needed base-devel git github-cli jq python
 
-          # Install git, git-lfs & other deps (only if missing/outdated)
-          pacman -S --noconfirm --needed base-devel git git-lfs go-yq diffutils
-
-      - name: Checkout main branch
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          lfs: true
 
-      - name: Configure Git
+      - name: Set up Python
+        uses: actions/setup-python@v7
+
+      - name: Configure Build User & Permissions
         run: |
-          git config --global user.name "Soumadip Das"
-          git config --global user.email "84225810+soymadip@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE/build"
-
-          # Initialize LFS
-          git lfs install
-
-      - name: Check & create repo branch
-        run: |
-          TARGET_BRANCH="repo"
-
-          # Check if branch exists on remote
-          if git ls-remote --heads origin "$TARGET_BRANCH" | grep -q "$TARGET_BRANCH"; then
-            echo "✅ Branch '$TARGET_BRANCH' found."
-          else
-            echo "⚠️ Branch '$TARGET_BRANCH' not found. Creating it now."
-
-            # Create and initialize the orphan branch
-            git checkout --orphan "$TARGET_BRANCH"
-            git rm -rf .
-            git commit --allow-empty -m "Initialize $TARGET_BRANCH branch"
-            git push origin "$TARGET_BRANCH"
-            git checkout main
-          fi
-
-      - name: Checkout repo branch into build directory
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}
-          ref: repo
-          path: build
-          fetch-depth: 1
-          lfs: true
-
-      - name: Create build user
-        run: |
-          # makepkg refuses to run as root
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
           chown -R builder:builder .
+          chmod +x src/install.sh
 
-      - name: Build packages
+      - name: Fetch Existing Repository DB
         run: |
-          # Disable debug package generation
+          BUILD_DIR=$(python3 -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
+          ARCH="x86_64"
+
+          mkdir -p "$BUILD_DIR/$ARCH"
+          echo "Fetching current database index to $BUILD_DIR/$ARCH..."
+          gh release download repo -D "$BUILD_DIR/$ARCH" --pattern "*.db*" --pattern "*.files*" || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Execute Package Builder
+        run: |
           sed -i 's/OPTIONS=(.*debug.*/OPTIONS=(!debug)/' /etc/makepkg.conf
 
-          su builder -c "export CARGO_HOME=$CARGO_HOME; export CARGO_TARGET_DIR=$CARGO_TARGET_DIR; export GOCACHE=$GOCACHE; export GOMODCACHE=$GOMODCACHE; bash src/builder"
+          # Handle input overrides
+          INPUT_PKGS="${{ inputs.packages }}"
+          DISPATCH_PKGS="${{ github.event.client_payload.packages }}"
+          TARGET_PKGS="${INPUT_PKGS:-$DISPATCH_PKGS}"
 
-      - name: Publish to repo branch
+          if [ -n "$TARGET_PKGS" ]; then
+            echo "Targeted build: $TARGET_PKGS"
+            export BUILD_TARGETS="$TARGET_PKGS"
+          fi
+
+          # Run Python package builder as unprivileged user
+          su builder -c "python3 -m builder build"
+        env:
+          CARGO_HOME: ${{ github.workspace }}/.cargo
+          CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo/target
+          GOCACHE: ${{ github.workspace }}/.go/cache
+          GOMODCACHE: ${{ github.workspace }}/.go/mod
+
+      - name: Update Database & Sync to Single Release
+        id: release
         run: |
-          # Ensure .gitattributes is in build dir for LFS tracking
-          cp .gitattributes build/
+          REPO_NAME=$(python3 -c "import json; print(json.load(open('config.json')).get('meta', {}).get('repo-name', ''))" 2>/dev/null || echo "")
+          BUILD_DIR=$(python3 -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
+          DIST_DIR=$(python3 -c "import json; print(json.load(open('config.json')).get('builder', {}).get('dist-dir', 'dist'))" 2>/dev/null || echo "dist")
+          ARCH="x86_64"
 
-          cd build
+          echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
+          echo "dist_dir=$DIST_DIR" >> $GITHUB_OUTPUT
 
-          # Initialize git if not already a repo
-          if [ ! -d ".git" ]; then
-            git init
-            git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          # Build the website index inside the dist/ folder
+          su builder -c "python3 -m builder build-index"
+
+          cd "$BUILD_DIR/$ARCH"
+
+          NEW_PKGS=$(ls *.pkg.tar.zst 2>/dev/null | wc -l || true)
+
+          if [ "$NEW_PKGS" -eq 0 ]; then
+            echo "No packages built. Skipping release update."
+            echo "updated=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
-          # Configure LFS in this repo
-          git lfs install
+          # Copy database files (replacing symlinks with actual files for GitHub Release assets)
+          cp -f "${REPO_NAME}.db.tar.gz" "${REPO_NAME}.db" || true
+          cp -f "${REPO_NAME}.files.tar.gz" "${REPO_NAME}.files" || true
 
-          git add .
+          # Clean up superseded asset versions from the single release tag
+          for new_pkg in *.pkg.tar.zst; do
+            base_name=$(echo "$new_pkg" | sed -E 's/-[0-9].*//')
+            echo "Removing older builds of $base_name from 'repo' release..."
+            gh release view repo --json assets --jq ".assets[].name" 2>/dev/null | grep "^${base_name}-[0-9]" | grep -v "$new_pkg" | xargs -I {} gh release delete-asset repo "{}" -y || true
+          done
 
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          # Push/update the single 'repo' release
+          echo "Publishing to single 'repo' GitHub Release..."
+          gh release create repo ./* \
+            --title "Custom Arch Repository" \
+            --notes "Automated package builds and repository index" \
+            --clobber
+            
+          echo "updated=true" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Job Summary
+        if: always()
+        run: |
+          BUILD_DIR=$(python3 -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
+          ARCH="x86_64"
+          TARGET_DIR="$BUILD_DIR/$ARCH"
+
+          echo "## Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -d "$TARGET_DIR" ] && [ $(ls "$TARGET_DIR"/*.pkg.tar.zst 2>/dev/null | wc -l || true) -gt 0 ]; then
+            echo "### Built Packages" >> $GITHUB_STEP_SUMMARY
+            echo "| Package File | Size |" >> $GITHUB_STEP_SUMMARY
+            echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+            for pkg in "$TARGET_DIR"/*.pkg.tar.zst; do
+              [ -f "$pkg" ] || continue
+              name=$(basename "$pkg")
+              size=$(du -h "$pkg" | cut -f1)
+              echo "| \`$name\` | $size |" >> $GITHUB_STEP_SUMMARY
+            done
           else
-            # Create a single commit (squash history)
-            git checkout --orphan temp-branch
-            git add .
-            git commit -m "Update packages from ${{ github.sha }}"
-
-            # Force push to keep only one commit
-            git push origin temp-branch:repo --force
-
-            echo "✅ Published packages to repo branch"
+            echo "No new package binaries were compiled in this run." >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Setup Pages
+        if: steps.release.outputs.updated == 'true'
+        uses: actions/configure-pages@v6
+
+      - name: Upload artifact
+        if: steps.release.outputs.updated == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ steps.release.outputs.dist_dir }}
+
+      - name: Deploy to GitHub Pages
+        if: steps.release.outputs.updated == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v5

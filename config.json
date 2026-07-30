@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "repo-name": "my-repo",
+    "repo-url": "https://mydehq.github.io/my-repo",
+    "project-url": "https://github.com/mydehq/my-repo"
+  },
+
+  "builder": {
+    "build-dir": "build",
+    "dist-dir": "dist",
+    "icon-file": "src/icon.png",
+    "templates": {
+      "index": "src/index.html",
+      "installer": "src/install.sh"
+    }
+  },
+
+  "packages": [
+    "myctl",
+    "mytm",
+    "nautilus-dummy",
+    "nsticky-bin",
+    "autotitle",
+    "kireisakura-kit",
+    "mpv-mpris2-bin",
+    "mpv-modernx",
+    "mpv-thumbfast-git",
+    "ireader-bin",
+    "vicinae-bin",
+    "catppuccin-cursors-macchiato",
+    "vorta-root",
+    "ttf-sil-abyssinica",
+    "git-credential-keepassxc-bin",
+    "catnap",
+    "python-textual-fastdatatable",
+    "sqlit"
+  ]
+}
