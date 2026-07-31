@@ -3,29 +3,30 @@ CLI routing & subcommand handler module using Python 3.14 pattern matching, data
 """
 
 import glob
+import os
 import shutil
 import subprocess
 import sys
 
-from .aur import (
+from . import __version__
+from .lib.aur import (
     AUR_CLONE_DIR,
     clone_package,
     fetch_aur_versions,
     get_actual_git_version,
 )
-from .config import CONFIG_FILE, load_config
-from .logger import (
-    COLOR_RESET,
-    COLOR_YELLOW,
+from .lib.colors import color
+from .lib.config import CONFIG_FILE, load_config
+from .lib.logger import (
     log_error,
     log_info,
     log_msg,
     log_success,
     log_warn,
 )
-from .pkgbuild import build_package
-from .repo import cleanup, get_repo_version, migrate_database, update_database
-from .site import generate_site
+from .lib.pkgbuild import build_package
+from .lib.repo import cleanup, get_repo_version, migrate_database, update_database
+from .lib.site import generate_site
 
 ARCH = "x86_64"
 
@@ -48,7 +49,7 @@ def print_help() -> None:
 
 def run_build() -> None:
     log_msg("")
-    log_warn("Starting AUR package build process (Modular Python 3.14 Dataclass)\n")
+    log_warn("Starting AUR package build process\n")
 
     if not shutil.which("makepkg"):
         log_error("makepkg is required but not installed")
@@ -62,10 +63,16 @@ def run_build() -> None:
         log_error("meta.repo-name is required")
         sys.exit(1)
 
-    (build_dir / ARCH).mkdir(parents=True, exist_ok=True)
+    target_dir = build_dir / ARCH
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    if not os.access(target_dir, os.W_OK):
+        log_error(f"Build directory is not writable: {target_dir}")
+        sys.exit(1)
+
     AUR_CLONE_DIR.mkdir(parents=True, exist_ok=True)
 
-    migrate_database(build_dir / ARCH, meta.repo_name)
+    migrate_database(target_dir, meta.repo_name)
 
     package_names = [p.name for p in cfg.packages]
 
@@ -79,7 +86,7 @@ def run_build() -> None:
 
     for pkg in cfg.packages:
         log_msg("")
-        log_info(f"Processing package: {COLOR_YELLOW}{pkg.name}{COLOR_RESET}")
+        log_info(f"Processing package: {color.yellow(pkg.name)}")
 
         db_file = build_dir / ARCH / f"{meta.repo_name}.db.tar.gz"
         repo_version = get_repo_version(db_file, pkg.name)
@@ -161,17 +168,22 @@ def main() -> None:
         sys.exit(0)
 
     arg = sys.argv[1]
+
     match arg:
         case "-h" | "--help" | "help":
             print_help()
             sys.exit(0)
+
         case "-v" | "--version" | "version":
-            print("Builder v1.0.0 (Python 3.14 Dataclasses)")
+            print(f"Builder v{__version__}")
             sys.exit(0)
+
         case "build":
             run_build()
+
         case "build-index":
             run_build_index()
+
         case _:
             print(f"Unknown command or flag: {arg}")
             print_help()

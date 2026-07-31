@@ -38,15 +38,17 @@ jobs:
     steps:
       - name: Install System Dependencies
         run: |
-          pacman -Sy --noconfirm --needed base-devel git github-cli jq python
+          pacman -Sy --noconfirm --needed base-devel git github-cli jq
 
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v9.0.0
+        with:
+          enable-cache: true
 
       - name: Configure Build User & Permissions
         run: |
@@ -57,12 +59,13 @@ jobs:
 
       - name: Fetch Existing Repository DB
         run: |
-          BUILD_DIR=$(python3 -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
+          BUILD_DIR=$(uv run --project builder python -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
           ARCH="x86_64"
 
           mkdir -p "$BUILD_DIR/$ARCH"
           echo "Fetching current database index to $BUILD_DIR/$ARCH..."
           gh release download repo -D "$BUILD_DIR/$ARCH" --pattern "*.db*" --pattern "*.files*" || true
+          chown -R builder:builder "$BUILD_DIR"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -81,7 +84,7 @@ jobs:
           fi
 
           # Run Python package builder as unprivileged user
-          su builder -c "python3 -m builder build"
+          su builder -c "uv run --project builder python -m builder build"
         env:
           CARGO_HOME: ${{ github.workspace }}/.cargo
           CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo/target
@@ -91,16 +94,16 @@ jobs:
       - name: Update Database & Sync to Single Release
         id: release
         run: |
-          REPO_NAME=$(python3 -c "import json; print(json.load(open('config.json')).get('meta', {}).get('repo-name', ''))" 2>/dev/null || echo "")
-          BUILD_DIR=$(python3 -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
-          DIST_DIR=$(python3 -c "import json; print(json.load(open('config.json')).get('builder', {}).get('dist-dir', 'dist'))" 2>/dev/null || echo "dist")
+          REPO_NAME=$(uv run --project builder python -c "import json; print(json.load(open('config.json')).get('meta', {}).get('repo-name', ''))" 2>/dev/null || echo "")
+          BUILD_DIR=$(uv run --project builder python -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
+          DIST_DIR=$(uv run --project builder python -c "import json; print(json.load(open('config.json')).get('builder', {}).get('dist-dir', 'dist'))" 2>/dev/null || echo "dist")
           ARCH="x86_64"
 
           echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
           echo "dist_dir=$DIST_DIR" >> $GITHUB_OUTPUT
 
           # Build the website index inside the dist/ folder
-          su builder -c "python3 -m builder build-index"
+          su builder -c "uv run --project builder python -m builder build-index"
 
           cd "$BUILD_DIR/$ARCH"
 
@@ -137,7 +140,7 @@ jobs:
       - name: Generate Job Summary
         if: always()
         run: |
-          BUILD_DIR=$(python3 -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
+          BUILD_DIR=$(uv run --project builder python -c "import json; print(json.load(open('config.json')).get('builder', {}).get('build-dir', 'build'))" 2>/dev/null || echo "build")
           ARCH="x86_64"
           TARGET_DIR="$BUILD_DIR/$ARCH"
 

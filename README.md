@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./src/icon.png" alt="MyRepo Logo" width="80">
+    <img src="./src/site/assets/icon.png" alt="MyRepo Logo" width="80">
     <h1>My Repo</h1>
     <p>
         <b>Automated AUR package building and repository hosting.</b>

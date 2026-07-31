@@ -1,0 +1,37 @@
+# commented ones are optional
+repo:
+  name: my-repo
+  url: https://github.com/mydehq/my-repo
+  display_name: My Repo # Default: repo.name
+  install_cmd: "{repo_url}/install"
+
+  # desc: "Automated AUR package builds."
+  # down_suffix: "/releases/download/repo"    # '/' prefix must.
+  # output_dir: build
+
+site:
+  url: https://mydehq.github.io/my-repo
+  name: My Repo # Default: repo_display_name
+  # output_dir: dist
+  # input_dir: site # Default: inbuilt (every file will be processed and vars will be replaced)
+
+packages:
+  - myctl
+  - mytm
+  - nautilus-dummy
+  - nsticky-bin
+  - mpv-mpris2-bin
+  - mpv-modernx
+  - mpv-thumbfast-git
+  - ireader-bin
+  - vicinae-bin
+  - catppuccin-cursors-macchiato
+  - vorta-root
+  - ttf-sil-abyssinica
+  - git-credential-keepassxc-bin
+  - catnap
+  - python-textual-fastdatatable
+  - sqlit
+  - autotitle
+  - kireisakura-kit|always # '|' separated options:
+#                             always - always compile even if no update

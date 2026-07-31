@@ -1,0 +1,11 @@
+[project]
+
+name = "my-builder"
+version = "0.0.1"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+
+dependencies = [
+    "pyyaml>=6.0.3",
+]

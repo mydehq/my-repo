@@ -4,9 +4,9 @@ AUR RPC API interaction & git cloning module using pathlib.
 
 import json
 import subprocess
+import urllib.error
 import urllib.parse
 import urllib.request
-import urllib.error
 from pathlib import Path
 
 from .logger import log_error, log_msg

@@ -1,3 +1,4 @@
 /aur
 /build
 /dist
+*cache/

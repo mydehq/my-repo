@@ -34,14 +34,17 @@ def install_deps(pkg_dir: Path) -> None:
     check_res = subprocess.run(
         ["pacman", "-T"] + makedeps, capture_output=True, check=False
     )
+
     if check_res.returncode == 0:
         log_info("Build dependencies already satisfied")
         return
 
     log_info(f"Installing missing dependencies: {' '.join(makedeps)}")
+
     inst_res = subprocess.run(
         ["sudo", "pacman", "-S", "--noconfirm", "--needed"] + makedeps, check=False
     )
+
     if inst_res.returncode != 0:
         raise RuntimeError("Failed to install build dependencies")
 
@@ -50,11 +53,13 @@ def build_package(pkg_dir: Path, build_dir: Path, arch: str) -> list[str]:
     install_deps(pkg_dir)
 
     log_info(f"Running makepkg in {pkg_dir}")
+
     res = subprocess.run(
         ["makepkg", "--noconfirm", "--nodeps", "--force", "--clean"],
         cwd=pkg_dir,
         check=False,
     )
+
     if res.returncode != 0:
         log_msg("")
         log_error("Build failed: Makepkg returned error.")
@@ -74,8 +79,11 @@ def build_package(pkg_dir: Path, build_dir: Path, arch: str) -> list[str]:
     copied: list[str] = []
     for src in pkg_files:
         dest = dest_dir / src.name
+
+        dest.unlink(missing_ok=True)
         shutil.copy2(src, dest)
         log_success(f"Packaged: {src.name}")
+
         copied.append(src.name)
         src.unlink(missing_ok=True)
 

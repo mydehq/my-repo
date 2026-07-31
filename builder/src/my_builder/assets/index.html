@@ -1,0 +1,188 @@
+<!doctype html>
+
+<html lang="en" data-bs-theme="dark">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{repo_name}</title>
+        <meta name="description" content="{repo_desc}" />
+        <meta name="theme-color" content="#1e1e2e" />
+
+        <!-- Local Assets -->
+        <link rel="icon" type="image/png" href="icon.png" />
+        <link rel="stylesheet" href="src/bootstrap/bootstrap.min.css" />
+        <link rel="stylesheet" href="src/custom.css" />
+    </head>
+
+    <body class="d-flex flex-column min-vh-100">
+        <!-- Top Navbar -->
+        <nav class="navbar navbar-expand-lg sticky-top doc-navbar">
+            <div class="container px-4">
+                <a
+                    class="navbar-brand d-flex align-items-center gap-3 fw-bolder text-primary"
+                    href="#"
+                >
+                    <img
+                        src="icon.png"
+                        alt="Logo"
+                        width="28"
+                        height="28"
+                        class="rounded shadow-sm"
+                    />
+                    <span id="navbar-title">{repo_name}</span>
+                </a>
+
+                <a
+                    class="nav-link fw-semibold text-subtext ms-auto d-flex align-items-center gap-2"
+                    title="Source Code"
+                    href="{project_url}"
+                    target="_blank"
+                >
+                    <svg class="bi" width="20" height="20" fill="currentColor">
+                        <use href="src/icons.svg#icon-github" />
+                    </svg>
+                    <span class="d-none d-md-inline">Source Code</span>
+                </a>
+            </div>
+        </nav>
+
+        <main class="container py-4 flex-grow-1">
+            <!-- Repo Overview Section -->
+            <section id="overview" class="mb-5 mt-2">
+                <p class="text-subtext mb-4 text-center">{repo_desc}</p>
+                <div
+                    id="repo-state"
+                    class="row g-3 p-3 repo-config-box rounded-3 text-center text-break mb-2 ms-0 me-0 pt-0 mt-0"
+                >
+                    <div
+                        class="col-4 border-end border-white border-opacity-10"
+                    >
+                        <span
+                            class="stat-header d-block text-uppercase small text-subtext fw-bolder mb-1"
+                            >Packages</span
+                        >
+                        <span class="stat-value text-sapphire"
+                            >{package_count}</span
+                        >
+                    </div>
+                    <div
+                        class="col-4 border-end border-white border-opacity-10"
+                    >
+                        <span
+                            class="stat-header d-block text-uppercase small text-subtext fw-bolder mb-1"
+                            >Repo Name</span
+                        >
+                        <span class="stat-value text-mauve">{repo_name}</span>
+                    </div>
+                    <div class="col-4">
+                        <span
+                            class="stat-header d-block text-uppercase small text-subtext fw-bolder mb-1"
+                            >Last Updated</span
+                        >
+                        <span class="stat-value text-green" id="last-updated"
+                            >{last_updated}</span
+                        >
+                    </div>
+                </div>
+            </section>
+
+            <!-- Installation Section -->
+            <section id="installation" class="mb-5">
+                <h2
+                    class="h5 text-uppercase text-primary fw-bold mb-3 letter-spacing-1"
+                >
+                    Installation
+                </h2>
+
+                <div
+                    class="repo-config-box p-3 d-flex justify-content-between align-items-center"
+                    id="install-step"
+                >
+                    <div
+                        class="font-monospace small text-center text-green text-nowrap overflow-x-auto no-scrollbar"
+                    >
+                        {repo_install_cmd}
+                    </div>
+                    <button class="copy-btn ms-2" aria-label="Copy command">
+                        <svg
+                            class="bi"
+                            width="16"
+                            height="16"
+                            fill="currentColor"
+                        >
+                            <use href="src/icons.svg#icon-copy" />
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Packages Table Section -->
+            <section id="packages" class="mb-5">
+                <h2
+                    class="h5 text-uppercase text-primary fw-bolder mb-3 letter-spacing-1"
+                >
+                    Available Packages
+                </h2>
+
+                <div
+                    class="table-responsive overflow-y-auto border border-white border-opacity-10 rounded shadow-sm"
+                    style="max-height: 360px"
+                >
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="sticky-top table-dark">
+                            <tr>
+                                <th
+                                    scope="col"
+                                    class="py-3 ps-3 text-primary text-uppercase small"
+                                >
+                                    Package Name
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="py-3 text-center text-primary text-uppercase small"
+                                >
+                                    Version
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="py-3 pe-3 text-end text-primary text-uppercase small"
+                                >
+                                    Arch
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- ROW_TEMPLATE_START -->
+                            <tr>
+                                <td class="ps-3 text-start">
+                                    <code>{pkg_name}</code>
+                                </td>
+                                <td class="text-center text-subtext small">
+                                    {pkg_version}
+                                </td>
+                                <td class="pe-3 text-end text-subtext small">
+                                    {pkg_arch}
+                                </td>
+                            </tr>
+                            <!-- ROW_TEMPLATE_END -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-top py-1">
+            <p class="text-center small mb-0">
+                Built with
+                <a class="no-ul" href="{builder_url}" target="_blank"
+                    >{builder_name}</a
+                >
+            </p>
+        </footer>
+
+        <!-- Scripts -->
+        <script src="src/bootstrap/bootstrap.bundle.min.js"></script>
+        <script src="src/custom.js"></script>
+    </body>
+</html>
