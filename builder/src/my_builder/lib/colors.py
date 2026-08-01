@@ -88,4 +88,14 @@ class Colors:
         return self.__color("gray", msg, bold)
 
 
-color = Colors()
+color: Colors = Colors()
+"""
+Use `color.` to format messages.
+
+Usage: `color.name(msg, bold=False)`
+
+Utility Methods:
+
+   - `color.bold(msg)` to bold a message
+   - `color.dim(msg)`  to dim a message
+"""
