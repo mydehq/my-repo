@@ -1,5 +1,5 @@
 """
-Static website generation (landing page HTML, installer, icon) module using pathlib.
+Process website templates and generate the repo index page.
 """
 
 import shutil
@@ -13,6 +13,7 @@ ARCH = "x86_64"
 
 
 def generate_site(cfg: Config) -> None:
+
     dist_dir = cfg.builder.dist_dir
     build_dir = cfg.builder.build_dir
     templates = cfg.builder.templates
