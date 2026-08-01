@@ -8,7 +8,7 @@ import subprocess
 import tarfile
 from pathlib import Path
 
-from .logger import log_error, log_info, log_msg, log_success, log_warn
+from .logger import log
 
 
 def get_repo_version(db_file: Path | str, pkg_name: str) -> str:
@@ -30,7 +30,7 @@ def get_repo_version(db_file: Path | str, pkg_name: str) -> str:
                         rem = dir_name[len(prefix) :]
                         if rem.count("-") >= 1:
                             return rem
-    except (gzip.BadGzipFile, tarfile.TarError, OSError):
+    except gzip.BadGzipFile, tarfile.TarError, OSError:
         return ""
 
     return ""
@@ -38,29 +38,32 @@ def get_repo_version(db_file: Path | str, pkg_name: str) -> str:
 
 def update_database(build_arch_dir: Path, db_name: str, packages: list[str]) -> None:
     if not packages:
-        log_info("No new packages to add to database.")
+        log.info("No new packages to add to database.")
         return
 
-    log_info(f"Updating repository database with {len(packages)} new packages...")
+    log.info(f"Updating repository database with {len(packages)} new packages...")
+
     db_file = f"{db_name}.db.tar.gz"
     lock_file = build_arch_dir / f"{db_file}.lck"
+
     if lock_file.exists():
-        log_warn(f"Removing stale lock file: {lock_file}")
+        log.warn(f"Removing stale lock file: {lock_file}")
         lock_file.unlink(missing_ok=True)
 
     res = subprocess.run(
         ["repo-add", db_file] + packages, cwd=build_arch_dir, check=False
     )
+
     if res.returncode != 0:
-        log_error("Failed to update database")
+        log.error("Failed to update database")
         raise RuntimeError("repo-add failed")
 
     for f in build_arch_dir.glob("*.old"):
         f.unlink(missing_ok=True)
 
-    log_msg("")
-    log_success("Repository database updated")
-    log_msg("")
+    log.info("")
+    log.success("Repository database updated")
+    log.info("")
 
 
 def migrate_database(build_arch_dir: Path, repo_name: str) -> None:
@@ -78,11 +81,12 @@ def migrate_database(build_arch_dir: Path, repo_name: str) -> None:
         old_db_link = build_arch_dir / f"{old_base}.db"
         old_files_link = build_arch_dir / f"{old_base}.files"
 
-        log_warn(f"Detected repository rename from '{old_base}' to '{repo_name}'\n")
-        log_info("Migrating database files...")
+        log.warn(f"Detected repository rename from '{old_base}' to '{repo_name}'\n")
+        log.info("Migrating database files...")
 
         (build_arch_dir / old_db).rename(build_arch_dir / db_file)
-        log_msg(f"Renamed DB: {old_db} -> {db_file}")
+
+        log.success(f"Renamed DB: {old_db} -> {db_file}")
 
         if old_db_link.is_symlink() or old_db_link.exists():
             old_db_link.unlink()
@@ -95,8 +99,8 @@ def migrate_database(build_arch_dir: Path, repo_name: str) -> None:
                 old_files_link.unlink()
                 (build_arch_dir / f"{repo_name}.files").symlink_to(new_files)
 
-        log_success("Migration complete")
-        log_msg("")
+        log.success("Migration complete")
+        log.info("")
 
 
 def cleanup(
@@ -106,15 +110,16 @@ def cleanup(
     repo_name: str,
     valid_pkgs: list[str],
 ) -> None:
-    log_msg("")
-    log_info("Cleaning up AUR cache...")
+
+    log.info("")
+    log.info("Cleaning up AUR cache...")
     if aur_clone_dir.exists():
         for item in aur_clone_dir.iterdir():
             if item.is_dir() and item.name not in valid_pkgs:
                 log_warn(f"Removing unused AUR clone: {item.name}")
                 shutil.rmtree(item, ignore_errors=True)
 
-    log_info("Cleaning up repository database...")
+    log.info("Cleaning up repository database...")
     build_arch_dir = build_dir / arch
 
     if not build_arch_dir.exists():
@@ -171,13 +176,14 @@ def cleanup(
         if not is_valid or not is_latest:
             if is_pkg:
                 if is_valid and not is_latest:
-                    log_warn(f"Removing old version: {name}")
+                    log.warn(f"Removing old version: {name}")
                 else:
-                    log_warn(f"Removing stale artifact: {name}")
+                    log.warn(f"Removing stale artifact: {name}")
                 if extracted_name:
                     pkgs_to_remove.add(extracted_name)
             else:
-                log_warn(f"Removing junk file: {name}")
+                log.warn(f"Removing junk file: {name}")
+
             item.unlink(missing_ok=True)
 
     db_file = f"{repo_name}.db.tar.gz"

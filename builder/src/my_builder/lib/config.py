@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .logger import log_error
+from .logger import log
 
 CONFIG_FILE = Path("config.json")
 
@@ -124,14 +124,17 @@ def load_config(path: Path | str = CONFIG_FILE) -> Config:
 
     try:
         data: dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
+
     except FileNotFoundError:
-        log_error(f"Config file not found: {config_path}")
+        log.error(f"Config file not found: {config_path}")
         raise ConfigError(f"File not found: {config_path}")
+
     except json.JSONDecodeError as e:
-        log_error(f"Invalid JSON in config file: {e}")
+        log.error(f"Invalid JSON in config file: {e}")
         raise ConfigError(f"Invalid JSON: {e}")
+
     except OSError as e:
-        log_error(f"Failed to load config file: {config_path}")
+        log.error(f"Failed to load config file: {config_path}")
         raise ConfigError(f"OS error reading file: {e}")
 
     meta = MetaConfig(**data.get("meta", {}))

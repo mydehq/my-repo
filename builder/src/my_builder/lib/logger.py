@@ -6,7 +6,7 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 from sys import stderr
-from typing import Literal, TextIO, cast
+from typing import Literal, TextIO
 
 from .colors import color
 
@@ -27,11 +27,11 @@ class LogLevelError(LogError):
         env: bool = False,
     ) -> None:
 
-        self.invalid_level = invalid_level
-        self.valid_levels = list(valid_levels)
-        self.env = env
+        self.invalid_level: str = invalid_level
+        self.valid_levels: list[str] = list(valid_levels)
+        self.env: bool = env
 
-        levels_str = ", ".join(repr(lvl) for lvl in self.valid_levels)
+        levels_str: str = ", ".join(repr(lvl) for lvl in self.valid_levels)
 
         super().__init__(
             f"Invalid log level {'' if not env else '(env)'}: {invalid_level!r}. Expected one of: [{levels_str}]"
@@ -42,8 +42,8 @@ class LogFileError(LogError):
     """Raised when a log file cannot be created, opened, or written to."""
 
     def __init__(self, path: Path, reason: str) -> None:
-        self.path = path
-        self.reason = reason
+        self.path: Path = path
+        self.reason: str = reason
 
         super().__init__(
             f"Failed to write to log file at '{self.path.relative_to(Path.cwd())}': {reason}"
@@ -62,7 +62,7 @@ class Logger:
         LOG_CONF: LogConf = {
             "debug": (0, "gray", "[DEBUG]"),
             "info": (10, "blue", "i"),
-            "success": (10, "green", "+"),
+            "success": (10, "green", "✓"),
             "warn": (20, "yellow", "!"),
             "error": (30, "red", "x"),
         }
@@ -73,7 +73,7 @@ class Logger:
             if env_level not in LOG_CONF:
                 raise LogLevelError(env_level, list(LOG_CONF), env=True)
 
-            log_level = cast(LogLevel, env_level)
+            log_level = env_level
 
         log_file: Path | None = None
         log_stream: TextIO | None = None
@@ -88,12 +88,14 @@ class Logger:
             if not log_dir.exists():
                 log_dir.mkdir(parents=True, exist_ok=True)
 
-            log_file = log_dir / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
+            log_file = log_dir / f"{datetime.now().astimezone():%Y-%m-%d_%H-%M-%S}.log"
 
             try:
                 log_stream = log_file.open("a", encoding="utf-8")
 
-                log_stream.write(f"{'=' * 30} {Path.cwd()} {'=' * 30}\n")
+                header = f" Started in: {Path.cwd()} ".center(80, "=")
+
+                _ = log_stream.write(f"{header}\n\n")
                 log_stream.flush()
 
             except OSError as e:
@@ -109,32 +111,35 @@ class Logger:
 
         self.LEVELS: LogConf = LOG_CONF
         self.min_level: int | float = LOG_CONF[log_level][0]
+        self.max_level_width: int = max(len(lvl) for lvl in self.LEVELS)
 
-        self.log_file = log_file
-        self.log_stream = log_stream
+        self.log_file: Path | None = log_file
+        self.log_stream: TextIO | None = log_stream
 
-    def __print_log(self, level_name: LogLevel, msg: str) -> None:
+    def __print_log(self, lvn: LogLevel, msg: str, bold: bool = False) -> None:
 
-        if level_name not in self.LEVELS:
-            raise LogLevelError(level_name, list(self.LEVELS))
+        if lvn not in self.LEVELS:
+            raise LogLevelError(lvn, list(self.LEVELS))
 
-        level, lcolor, prefix = self.LEVELS[level_name]
+        level, lcolor, prefix = self.LEVELS[lvn]
 
         if level < self.min_level:
             return
 
-        clr = getattr(color, lcolor)
+        clr = getattr(color, lcolor)  # pyright: ignore[reportAny]
 
         print(
-            f"{clr(prefix, bold=True)} {clr(msg)}",
-            file=stderr if level_name == "error" else None,
+            f"{clr(prefix, bold=True)} {clr(msg, bold)}",
+            file=stderr if lvn == "error" else None,
         )
 
         current_time = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
         if self.log_stream:
             try:
-                self.log_stream.write(f"[{current_time}] {level_name.upper()}: {msg}\n")
+                self.log_stream.write(  # pyright: ignore[reportUnusedCallResult]
+                    f"[{current_time}] {lvn.upper():<{self.max_level_width}} {msg}\n"
+                )
                 self.log_stream.flush()
 
             except OSError as e:
@@ -151,20 +156,20 @@ class Logger:
                 self.log_stream = None
                 self.log_file = None
 
-    def info(self, msg: str) -> None:
-        self.__print_log("info", msg)
+    def info(self, msg: str, bold: bool = False) -> None:
+        self.__print_log("info", msg, bold)
 
-    def success(self, msg: str) -> None:
-        self.__print_log("success", msg)
+    def success(self, msg: str, bold: bool = False) -> None:
+        self.__print_log("success", msg, bold)
 
-    def warn(self, msg: str) -> None:
-        self.__print_log("warn", msg)
+    def warn(self, msg: str, bold: bool = False) -> None:
+        self.__print_log("warn", msg, bold)
 
-    def error(self, msg: str) -> None:
-        self.__print_log("error", msg)
+    def error(self, msg: str, bold: bool = False) -> None:
+        self.__print_log("error", msg, bold)
 
-    def debug(self, msg: str) -> None:
-        self.__print_log("debug", msg)
+    def debug(self, msg: str, bold: bool = False) -> None:
+        self.__print_log("debug", msg, bold)
 
 
 log: Logger = Logger()

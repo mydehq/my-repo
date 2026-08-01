@@ -9,7 +9,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from .logger import log_error, log_msg
+from .logger import log
 
 AUR_BASE_URL = "https://aur.archlinux.org"
 AUR_CLONE_DIR = Path("aur")
@@ -30,17 +30,20 @@ def fetch_aur_versions(package_names: list[str]) -> dict[str, str]:
             if resp.status == 200:
                 data = json.loads(resp.read().decode("utf-8"))
                 results = data.get("results", [])
+
                 return {item["Name"]: item["Version"] for item in results}
+
     except (urllib.error.URLError, json.JSONDecodeError, TimeoutError, OSError) as e:
-        log_error(f"Failed to query AUR RPC API: {e}")
+        log.error(f"Failed to query AUR RPC API: {e}")
 
     return {}
 
 
 def clone_package(pkg_name: str) -> Path:
     pkg_dir = AUR_CLONE_DIR / pkg_name
+
     if pkg_dir.exists():
-        log_msg("Updating cache")
+        log.info("Updating cache")
         res = subprocess.run(
             ["git", "-C", str(pkg_dir), "pull", "--quiet"],
             capture_output=True,
@@ -50,7 +53,8 @@ def clone_package(pkg_name: str) -> Path:
         if res.returncode != 0:
             raise RuntimeError(f"git pull failed: {res.stderr}")
     else:
-        log_msg("Cloning from AUR")
+        log.info("Cloning from AUR")
+
         url = f"{AUR_BASE_URL}/{pkg_name}.git"
         res = subprocess.run(
             ["git", "clone", "--quiet", url, str(pkg_dir)],
@@ -73,7 +77,7 @@ def get_actual_git_version(pkg_name: str) -> str:
 
     try:
         pkg_dir = clone_package(pkg_name)
-    except (RuntimeError, FileNotFoundError, subprocess.SubprocessError):
+    except RuntimeError, FileNotFoundError, subprocess.SubprocessError:
         return ""
 
     pkgbuild = pkg_dir / "PKGBUILD"
@@ -84,5 +88,5 @@ def get_actual_git_version(pkg_name: str) -> str:
     try:
         out = subprocess.check_output(["bash", "-c", bash_cmd], text=True).strip()
         return out
-    except (subprocess.SubprocessError, OSError):
+    except subprocess.SubprocessError, OSError:
         return ""

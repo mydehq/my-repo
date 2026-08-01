@@ -1,2 +1,4 @@
 [tools]
+"npm:live-server" = "latest"
 ruff = "latest"
+uv = "latest"

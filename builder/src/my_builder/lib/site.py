@@ -6,7 +6,7 @@ import shutil
 from datetime import datetime, timezone
 
 from .config import Config
-from .logger import log_info, log_msg, log_success, log_warn
+from .logger import log
 from .repo import get_repo_version
 
 ARCH = "x86_64"
@@ -23,13 +23,13 @@ def generate_site(cfg: Config) -> None:
     icon_file = cfg.builder.icon_file
 
     if not index_template.exists():
-        log_warn(
+        log.warn(
             f"Landing page template not found: {index_template}. Skipping generation."
         )
         return
 
-    log_msg("")
-    log_info("Generating landing pages...")
+    log.info("")
+    log.info("Generating landing pages...")
     dist_dir.mkdir(parents=True, exist_ok=True)
 
     db_file = build_dir / ARCH / f"{meta.repo_name}.db.tar.gz"
@@ -71,12 +71,12 @@ def generate_site(cfg: Config) -> None:
 
     index_out = dist_dir / "index.html"
     index_out.write_text(html_content, encoding="utf-8")
-    log_success("   Generated: Landing page.")
+    log.success("   Generated: Landing page.")
 
     # Copy Icon if present
     if icon_file.exists():
         shutil.copy2(icon_file, dist_dir / "icon.png")
-        log_success("   Copied icon.png")
+        log.success("   Copied icon.png")
 
     # Generate Installer
     if installer_template.exists():
@@ -93,4 +93,4 @@ def generate_site(cfg: Config) -> None:
         inst_out = dist_dir / "install"
         inst_out.write_text(inst_content, encoding="utf-8")
         inst_out.chmod(0o755)
-        log_success("   Generated: installer\n")
+        log.success("   Generated: installer\n")

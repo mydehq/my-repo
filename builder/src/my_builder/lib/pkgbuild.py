@@ -6,11 +6,12 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .logger import log_error, log_info, log_msg, log_success
+from .logger import log
 
 
 def install_deps(pkg_dir: Path) -> None:
-    log_info("Checking for build dependencies")
+    log.info("Checking for build dependencies")
+
     res = subprocess.run(
         ["makepkg", "--printsrcinfo"],
         cwd=pkg_dir,
@@ -28,7 +29,7 @@ def install_deps(pkg_dir: Path) -> None:
             makedeps.append(line.removeprefix("makedepends = "))
 
     if not makedeps:
-        log_info("No build dependencies found")
+        log.info("No build dependencies found")
         return
 
     check_res = subprocess.run(
@@ -36,10 +37,10 @@ def install_deps(pkg_dir: Path) -> None:
     )
 
     if check_res.returncode == 0:
-        log_info("Build dependencies already satisfied")
+        log.info("Build dependencies already satisfied")
         return
 
-    log_info(f"Installing missing dependencies: {' '.join(makedeps)}")
+    log.info(f"Installing missing dependencies: {' '.join(makedeps)}")
 
     inst_res = subprocess.run(
         ["sudo", "pacman", "-S", "--noconfirm", "--needed"] + makedeps, check=False
@@ -52,7 +53,7 @@ def install_deps(pkg_dir: Path) -> None:
 def build_package(pkg_dir: Path, build_dir: Path, arch: str) -> list[str]:
     install_deps(pkg_dir)
 
-    log_info(f"Running makepkg in {pkg_dir}")
+    log.info(f"Running makepkg in {pkg_dir}")
 
     res = subprocess.run(
         ["makepkg", "--noconfirm", "--nodeps", "--force", "--clean"],
@@ -61,8 +62,8 @@ def build_package(pkg_dir: Path, build_dir: Path, arch: str) -> list[str]:
     )
 
     if res.returncode != 0:
-        log_msg("")
-        log_error("Build failed: Makepkg returned error.")
+        log.info("")
+        log.error("Build failed: Makepkg returned error.")
         raise RuntimeError("makepkg build failed")
 
     pkg_files: list[Path] = []
@@ -70,7 +71,7 @@ def build_package(pkg_dir: Path, build_dir: Path, arch: str) -> list[str]:
         pkg_files.extend(pkg_dir.glob(ext))
 
     if not pkg_files:
-        log_error("No package files found after build")
+        log.error("No package files found after build")
         raise FileNotFoundError("No package files found")
 
     dest_dir = build_dir / arch
@@ -82,7 +83,7 @@ def build_package(pkg_dir: Path, build_dir: Path, arch: str) -> list[str]:
 
         dest.unlink(missing_ok=True)
         shutil.copy2(src, dest)
-        log_success(f"Packaged: {src.name}")
+        log.success(f"Packaged: {src.name}")
 
         copied.append(src.name)
         src.unlink(missing_ok=True)
