@@ -1,11 +1,21 @@
 [project]
-
 name = "my-builder"
 version = "0.0.1"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+authors = [
+    { name = "Soumadip Das", email = "soumadip+github@zohomail.in" }
+]
 
+requires-python = ">=3.14"
 dependencies = [
     "pyyaml>=6.0.3",
 ]
+
+[project.scripts]
+my-builder = "my_builder.cli:main"
+
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"

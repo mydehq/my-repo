@@ -3,9 +3,9 @@ revision = 3
 requires-python = ">=3.14"
 
 [[package]]
-name = "builder"
-version = "0.1.0"
-source = { virtual = "." }
+name = "my-builder"
+version = "0.0.1"
+source = { editable = "." }
 dependencies = [
     { name = "pyyaml" },
 ]
