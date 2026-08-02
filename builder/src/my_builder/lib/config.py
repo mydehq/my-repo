@@ -4,141 +4,144 @@ Config parsing module for config.json using Python dataclasses and pathlib.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
-from .logger import log
+import yaml
 
-CONFIG_FILE = Path("config.json")
-
-
-class ConfigError(Exception):
-    """Raised when configuration loading or parsing fails."""
+from ..defaults import defaults
 
 
-@dataclass
-class MetaConfig:
-    repo_name: str = ""
-    repo_url: str = ""
-    project_url: str = ""
+@dataclass(slots=True)
+class RepoConfig:
+    name: str
+    display_name: str
+    url: str
+    desc: str = "Automated AUR package builds."
+    down_suffix: str = "/releases/download/repo"
+    install_cmd: str = "{repo_url}/setup"
+    output_dir: Path = Path("build")
+    clone_dir: Path = Path(defaults.data_dir) / "clone"
+    packager: str | None = None
 
-
-@dataclass
-class TemplatesConfig:
-    index: Path = Path("src/index.html")
-    installer: Path = Path("src/install.sh")
+    db_file: Path = field(init=False)
 
     def __post_init__(self) -> None:
-        self.index = Path(self.index)
-        self.installer = Path(self.installer)
+
+        self.name = self.name.strip()
+
+        if not self.display_name:
+            self.display_name = self.name
+
+        self.db_file = self.output_dir / f"{self.name}.tar.gz"
+
+        self.output_dir = self.output_dir.expanduser().resolve()
+
+        if "{repo_url}" in self.install_cmd:
+            self.install_cmd = self.install_cmd.replace("{repo_url}", self.url)
 
 
-@dataclass
-class BuilderConfig:
-    build_dir: Path = Path("build")
-    dist_dir: Path = Path("dist")
-    icon_file: Path = Path("src/icon.png")
-    templates: TemplatesConfig = field(default_factory=TemplatesConfig)
+@dataclass(slots=True)
+class AURConfig:
+    url: str = defaults.aur_url
+    pkg_base: str = defaults.aur_pkg_url
+
+    pkg_url: str = field(init=False)  # do not initialize
 
     def __post_init__(self) -> None:
-        self.build_dir = Path(self.build_dir)
-        self.dist_dir = Path(self.dist_dir)
-        self.icon_file = Path(self.icon_file)
+        self.url = self.url.rstrip("/")
+        self.pkg_base = self.pkg_base.rstrip("/")
 
-        if isinstance(self.templates, dict):
-            self.templates = TemplatesConfig(**self.templates)
+        self.pkg_url = f"{self.url}/{self.pkg_base}"
 
 
-@dataclass
+@dataclass(slots=True)
+class SiteConfig:
+    url: str
+    name: str
+    desc: str
+    input_dir: Path = defaults.site_input_dir
+    output_dir: Path = Path("dist")
+
+    def __post_init__(self) -> None:
+        if self.url and not self.url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+
+        self.input_dir = self.input_dir.expanduser().resolve()
+        self.output_dir = self.output_dir.expanduser().resolve()
+
+
+@dataclass(slots=True)
 class PackageSpec:
     name: str
     force: bool = False
     options: dict[str, Any] = field(default_factory=dict)
 
+    @classmethod
+    def from_str(cls, raw: str) -> Self:
+        parts = raw.split("|")
 
-@dataclass
+        return cls(
+            name=parts[0].strip(),
+            force=len(parts) > 1 and parts[1].strip() == "always",
+        )
+
+    @classmethod
+    def parse_list(cls, pkgs: list[str]) -> list[Self]:
+        return [cls.from_str(pkg) for pkg in pkgs]
+
+
+@dataclass(slots=True)
 class Config:
-    meta: MetaConfig
-    builder: BuilderConfig
+    repo: RepoConfig
+    aur: AURConfig
+    site: SiteConfig
     packages: list[PackageSpec]
 
+    def __post_init__(self) -> None:
+        if not self.site.name:
+            self.site.name = self.repo.display_name
 
-def parse_package_item(item: Any) -> PackageSpec | None:
-    match item:
-        case str(name):
-            return PackageSpec(name=name)
-
-        case {"name": str(name), **opts}:
-            opts_copy = dict(opts)
-            force = bool(opts_copy.pop("force", False))
-
-            return PackageSpec(name=name, force=force, options=opts_copy)
-
-        case dict() as d if len(d) == 1:
-            name, opts = next(iter(d.items()))
-
-            if isinstance(opts, dict):
-                opts_copy = dict(opts)
-                force = bool(opts_copy.pop("force", False))
-
-                return PackageSpec(name=name, force=force, options=opts_copy)
-
-            return PackageSpec(name=name)
-
-        case _:
-            return None
+        if not self.site.desc:
+            self.site.desc = self.repo.desc
 
 
-def parse_packages(raw_packages: Any) -> list[PackageSpec]:
-    packages: list[PackageSpec] = []
-
-    if isinstance(raw_packages, list):
-        for item in raw_packages:
-            spec = parse_package_item(item)
-            if spec:
-                packages.append(spec)
-
-    elif isinstance(raw_packages, dict):
-        for name, val in raw_packages.items():
-            match val:
-                case True | False:
-                    packages.append(PackageSpec(name=name))
-
-                case dict() as opts:
-                    opts_copy = dict(opts)
-                    force = bool(opts_copy.pop("force", False))
-                    packages.append(
-                        PackageSpec(name=name, force=force, options=opts_copy)
-                    )
-
-                case _:
-                    packages.append(PackageSpec(name=name))
-
-    return packages
+class ConfigError(Exception):
+    """Raised when configuration loading fails."""
 
 
-def load_config(path: Path | str = CONFIG_FILE) -> Config:
-    config_path = Path(path)
+def load_config(conf_file: Path) -> Config:
+    """
+    Load and parse a configuration file.
+    """
+
+    if not isinstance(conf_file, Path):
+        raise ConfigError("conf_file must be a Path")
+
+    conf_file = conf_file.expanduser().resolve()
+
+    if not conf_file.exists():
+        raise ConfigError(f"Config file not found: {conf_file}")
+
+    if not conf_file.is_file():
+        raise ConfigError(f"Not a file: {conf_file}")
 
     try:
-        data: dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8"))
+        raw_config: dict[str, Any] = yaml.safe_load(
+            conf_file.read_text(encoding="utf-8")
+        )
+    except OSError as exc:
+        raise ConfigError(f"Failed to read config: {conf_file}") from exc
 
-    except FileNotFoundError:
-        log.error(f"Config file not found: {config_path}")
-        raise ConfigError(f"File not found: {config_path}")
+    repo: RepoConfig = RepoConfig(**raw_config.get("meta", {}))
+    site: SiteConfig = SiteConfig(**raw_config.get("site", {}))
+    aur: AURConfig = AURConfig(**raw_config.get("aur", {}))
+    packages: list[PackageSpec] = PackageSpec.parse_list(raw_config.get("packages", []))
 
-    except json.JSONDecodeError as e:
-        log.error(f"Invalid JSON in config file: {e}")
-        raise ConfigError(f"Invalid JSON: {e}")
-
-    except OSError as e:
-        log.error(f"Failed to load config file: {config_path}")
-        raise ConfigError(f"OS error reading file: {e}")
-
-    meta = MetaConfig(**data.get("meta", {}))
-    builder = BuilderConfig(**data.get("builder", {}))
-    packages = parse_packages(data.get("packages", []))
-
-    return Config(meta=meta, builder=builder, packages=packages)
+    return Config(
+        repo=repo,
+        aur=aur,
+        site=site,
+        packages=packages,
+    )
