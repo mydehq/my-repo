@@ -16,8 +16,8 @@ from ..defaults import defaults
 @dataclass(slots=True)
 class RepoConfig:
     name: str
-    display_name: str
     url: str
+    display_name: str = ""
     desc: str = "Automated AUR package builds."
     down_suffix: str = "/releases/download/repo"
     install_cmd: str = "{repo_url}/setup"
@@ -59,8 +59,8 @@ class AURConfig:
 @dataclass(slots=True)
 class SiteConfig:
     url: str
-    name: str
-    desc: str
+    name: str = ""
+    desc: str = ""
     input_dir: Path = defaults.site_input_dir
     output_dir: Path = Path("dist")
 
@@ -134,7 +134,7 @@ def load_config(conf_file: Path) -> Config:
     except OSError as exc:
         raise ConfigError(f"Failed to read config: {conf_file}") from exc
 
-    repo: RepoConfig = RepoConfig(**raw_config.get("meta", {}))
+    repo: RepoConfig = RepoConfig(**raw_config.get("repo", {}))
     site: SiteConfig = SiteConfig(**raw_config.get("site", {}))
     aur: AURConfig = AURConfig(**raw_config.get("aur", {}))
     packages: list[PackageSpec] = PackageSpec.parse_list(raw_config.get("packages", []))
