@@ -6,34 +6,138 @@ import gzip
 import shutil
 import subprocess
 import tarfile
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import IO
 
 from .logger import log
 
 
-def get_repo_version(db_file: Path | str, pkg_name: str) -> str:
-    db_path = Path(db_file)
-    if not db_path.exists():
-        return ""
+class PKGError(Exception):
+    """Raised when a package is not found in the repository."""
+
+
+@dataclass(slots=True, frozen=True)
+class PkgInfo:
+    name: str
+    base: str
+    version: str
+    desc: str
+
+    url: str
+    licenses: list[str]
+    arch: str
+
+    build_date: int
+    packager: str
+
+    compressed_size: int
+    installed_size: int
+    sha256: str
+
+    dependencies: list[str]
+    optional_dependencies: list[str]
+    make_dependencies: list[str]
+    check_dependencies: list[str]
+
+    provides: list[str]
+    conflicts: list[str]
+    replaces: list[str]
+
+    groups: list[str]
+
+    @property
+    def compressed_size_mb(self) -> float:
+        return self.compressed_size / (1024 * 1024)
+
+    @property
+    def installed_size_mb(self) -> float:
+        return self.installed_size / (1024 * 1024)
+
+    @property
+    def build_datetime(self) -> datetime:
+        return datetime.fromtimestamp(self.build_date, tz=UTC)
+
+
+def _parse_desc(desc: IO[bytes]) -> dict[str, list[str]]:
+    """Parse a pacman desc file."""
+
+    fields: dict[str, list[str]] = {}
+    current: str | None = None
+
+    for line in desc.read().decode("utf-8", errors="replace").splitlines():
+        if not line:
+            continue
+
+        if line.startswith("%") and line.endswith("%"):
+            current = line[1:-1]
+            fields[current] = []
+        elif current is not None:
+            fields[current].append(line)
+
+    return fields
+
+
+def get_pkg_info(db_file: Path, pkg_name: str) -> PkgInfo:
+    """Return package information from a pacman repository database."""
+
+    if not db_file.is_file():
+        raise ValueError(f"Invalid database file: {db_file}")
 
     prefix = f"{pkg_name}-"
+
     try:
         with (
-            gzip.open(db_path, "rb") as gz,
+            gzip.open(db_file, "rb") as gz,
             tarfile.open(fileobj=gz, mode="r:*") as tar,
         ):
-            for member in tar.getmembers():
+            for member in tar:
                 parts = member.name.split("/")
-                if len(parts) >= 2 and parts[1] == "desc":
-                    dir_name = parts[0]
-                    if dir_name.startswith(prefix):
-                        rem = dir_name[len(prefix) :]
-                        if rem.count("-") >= 1:
-                            return rem
-    except gzip.BadGzipFile, tarfile.TarError, OSError:
-        return ""
 
-    return ""
+                if (
+                    len(parts) != 2
+                    or parts[1] != "desc"
+                    or not parts[0].startswith(prefix)
+                ):
+                    continue
+
+                desc = tar.extractfile(member)
+
+                if desc is None:
+                    continue
+
+                fields = _parse_desc(desc)
+
+                return PkgInfo(
+                    name=fields["NAME"][0],
+                    base=fields.get("BASE", [""])[0],
+                    version=fields["VERSION"][0],
+                    desc=fields.get("DESC", [""])[0],
+                    url=fields.get("URL", [""])[0],
+                    licenses=fields.get("LICENSE", []),
+                    arch=fields["ARCH"][0],
+                    build_date=int(fields["BUILDDATE"][0]),
+                    packager=fields.get("PACKAGER", [""])[0],
+                    compressed_size=int(fields.get("CSIZE", ["0"])[0]),
+                    installed_size=int(fields.get("ISIZE", ["0"])[0]),
+                    sha256=fields.get("SHA256SUM", [""])[0],
+                    dependencies=fields.get("DEPENDS", []),
+                    optional_dependencies=fields.get("OPTDEPENDS", []),
+                    make_dependencies=fields.get("MAKEDEPENDS", []),
+                    check_dependencies=fields.get("CHECKDEPENDS", []),
+                    provides=fields.get("PROVIDES", []),
+                    conflicts=fields.get("CONFLICTS", []),
+                    replaces=fields.get("REPLACES", []),
+                    groups=fields.get("GROUPS", []),
+                )
+
+    except (gzip.BadGzipFile, tarfile.TarError, OSError) as e:
+        raise RuntimeError(f"Failed to read '{db_file}': {e}") from e
+
+    raise LookupError(
+        f"Package '{pkg_name}' not found in repository database '{db_file}'."
+    )
 
 
 def update_database(build_arch_dir: Path, db_name: str, packages: list[str]) -> None:
@@ -116,7 +220,7 @@ def cleanup(
     if aur_clone_dir.exists():
         for item in aur_clone_dir.iterdir():
             if item.is_dir() and item.name not in valid_pkgs:
-                log_warn(f"Removing unused AUR clone: {item.name}")
+                log.warn(f"Removing unused AUR clone: {item.name}")
                 shutil.rmtree(item, ignore_errors=True)
 
     log.info("Cleaning up repository database...")
