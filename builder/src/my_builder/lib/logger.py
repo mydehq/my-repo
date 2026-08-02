@@ -8,6 +8,7 @@ from pathlib import Path
 from sys import stderr
 from typing import Literal, TextIO
 
+from ..defaults import defaults
 from .colors import color
 
 __all__ = ["CustomLogger", "LogError", "LogFileError", "LogLevelError", "log"]
@@ -56,7 +57,9 @@ LogConf = dict[LogLevel, tuple[int | float, str, str]]
 
 class Logger:
     def __init__(
-        self, log_level: LogLevel = "info", log_dir: Path | None = None
+        self,
+        log_level: LogLevel = "info",
+        log_dir: Path | None = defaults.data_dir / "logs",
     ) -> None:
 
         LOG_CONF: LogConf = {
@@ -184,3 +187,9 @@ Options:
     log_level: str = Log level to use (default: "info")
     log_file: str = Log file to use (default: None)
 """
+
+
+def __getattr__(name: str):
+    if name not in __all__:
+        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    return globals()[name]
