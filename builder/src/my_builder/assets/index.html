@@ -35,7 +35,7 @@
                 <a
                     class="nav-link fw-semibold text-subtext ms-auto d-flex align-items-center gap-2"
                     title="Source Code"
-                    href="{project_url}"
+                    href="{repo_url}"
                     target="_blank"
                 >
                     <svg class="bi" width="20" height="20" fill="currentColor">
@@ -62,7 +62,7 @@
                             >Packages</span
                         >
                         <span class="stat-value text-sapphire"
-                            >{package_count}</span
+                            >{pkg_count}</span
                         >
                     </div>
                     <div
@@ -155,7 +155,9 @@
                             <!-- ROW_TEMPLATE_START -->
                             <tr>
                                 <td class="ps-3 text-start">
-                                    <code>{pkg_name}</code>
+                                    <code>
+                                        <a href="{pkg_aur_url}">{pkg_name}</a>
+                                    </code>
                                 </td>
                                 <td class="text-center text-subtext small">
                                     {pkg_version}
