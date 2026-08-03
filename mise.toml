@@ -1,4 +1,5 @@
 [tools]
 "npm:live-server" = "latest"
+"pipx:quikrun" = "latest"
 ruff = "latest"
 uv = "latest"
