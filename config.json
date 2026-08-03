@@ -25,7 +25,6 @@
     "mpv-mpris2-bin",
     "mpv-modernx",
     "mpv-thumbfast-git",
-    "ireader-bin",
     "vicinae-bin",
     "catppuccin-cursors-macchiato",
     "vorta-root",
@@ -33,6 +32,7 @@
     "git-credential-keepassxc-bin",
     "catnap",
     "python-textual-fastdatatable",
-    "sqlit"
+    "sqlit",
+    "noctalia-git"
   ]
 }
