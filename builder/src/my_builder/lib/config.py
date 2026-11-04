@@ -33,7 +33,7 @@ class RepoConfig:
         if not self.display_name:
             self.display_name = self.name
 
-        self.db_file = self.output_dir / f"{self.name}.tar.gz"
+        self.db_file = self.output_dir / f"{self.name}.db.tar.gz"
 
         self.output_dir = self.output_dir.expanduser().resolve()
 
