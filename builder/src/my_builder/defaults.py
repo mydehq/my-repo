@@ -19,11 +19,6 @@ class Defaults:
     pkg_template_end: str = "ROW_TEMPLATE_END"
 
     def __post_init__(self) -> None:
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        (self.data_dir / "DO_NOT_EDIT").write_text(
-            "This directory shouldn't be edited/deleted manually"
-        )
-
         self.aur_url = self.aur_url.rstrip("/")
         self.aur_pkg_url = f"{self.aur_url}/packages"
 
