@@ -2,14 +2,14 @@
 Repository database (repo-add, repo-remove, db parsing, cleanup, migration) module using pathlib.
 """
 
-import gzip
 import shutil
 import subprocess
 import tarfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from functools import cache
 from pathlib import Path
-from typing import IO
+from typing import IO, Self
 
 from .logger import log
 
@@ -21,6 +21,7 @@ class PKGError(Exception):
 @dataclass(slots=True, frozen=True)
 class PkgInfo:
     name: str
+    filename: str
     base: str
     version: str
     desc: str
@@ -59,85 +60,122 @@ class PkgInfo:
     def build_datetime(self) -> datetime:
         return datetime.fromtimestamp(self.build_date, tz=UTC)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, list[str]]) -> Self:
+        """Construct a PkgInfo from a dictionary."""
+
+        def get_str(key: str, default: str = "") -> str:
+            return data.get(key, [default])[0]
+
+        def get_int(key: str, default: int = 0) -> int:
+            val = data.get(key, ["0"])[0]
+            return int(val) if val.isdigit() else default
+
+        def get_list(key: str) -> list[str]:
+            return data.get(key, [])
+
+        return cls(
+            name=get_str("NAME"),
+            filename=get_str(
+                "FILENAME",
+                default=f"{get_str('NAME')}-{get_str('VERSION')}-{get_str('ARCH')}.pkg.tar.zst",
+            ),
+            base=get_str("BASE", default=get_str("NAME")),
+            version=get_str("VERSION"),
+            desc=get_str("DESC"),
+            url=get_str("URL"),
+            licenses=get_list("LICENSE"),
+            arch=get_str("ARCH"),
+            build_date=get_int("BUILDDATE"),
+            packager=get_str("PACKAGER"),
+            compressed_size=get_int("CSIZE"),
+            installed_size=get_int("ISIZE"),
+            sha256=get_str("SHA256"),
+            dependencies=get_list("DEPENDS"),
+            optional_dependencies=get_list("OPTDEPENDS"),
+            make_dependencies=get_list("MAKEDEPENDS"),
+            check_dependencies=get_list("CHECKDEPENDS"),
+            provides=get_list("PROVIDES"),
+            conflicts=get_list("CONFLICTS"),
+            replaces=get_list("REPLACES"),
+            groups=get_list("GROUPS"),
+        )
+
+
+@dataclass(slots=True)
+class RepoInfo:
+    packages: list[PkgInfo] = field(default_factory=list)
+
+    @property
+    def pkg_count(self) -> int:
+        return len(self.packages)
+
 
 def _parse_desc(desc: IO[bytes]) -> dict[str, list[str]]:
-    """Parse a pacman desc file."""
+    """Parse a pacman desc file into key-value lists."""
 
     fields: dict[str, list[str]] = {}
     current: str | None = None
 
     for line in desc.read().decode("utf-8", errors="replace").splitlines():
+        line = line.strip()
         if not line:
             continue
 
         if line.startswith("%") and line.endswith("%"):
             current = line[1:-1]
             fields[current] = []
+
         elif current is not None:
             fields[current].append(line)
 
     return fields
 
 
-def get_pkg_info(db_file: Path, pkg_name: str) -> PkgInfo:
-    """Return package information from a pacman repository database."""
+@cache
+def get_repo_pkgs(db_file: Path) -> RepoInfo:
+    """Parse pacman database archive (.db or .db.tar.gz) and return RepoInfo."""
 
-    if not db_file.is_file():
-        raise ValueError(f"Invalid database file: {db_file}")
+    if not db_file.exists():
+        return RepoInfo()
 
-    prefix = f"{pkg_name}-"
+    packages: list[PkgInfo] = []
 
-    try:
-        with (
-            gzip.open(db_file, "rb") as gz,
-            tarfile.open(fileobj=gz, mode="r:*") as tar,
-        ):
-            for member in tar:
-                parts = member.name.split("/")
+    with tarfile.open(db_file, "r:*") as tar:
+        for member in tar.getmembers():
+            if not member.name.endswith("/desc"):
+                continue
 
-                if (
-                    len(parts) != 2
-                    or parts[1] != "desc"
-                    or not parts[0].startswith(prefix)
-                ):
-                    continue
+            f = tar.extractfile(member)
+            if f is not None:
+                packages.append(PkgInfo.from_dict(_parse_desc(f)))
 
-                desc = tar.extractfile(member)
+    return RepoInfo(packages=packages)
 
-                if desc is None:
-                    continue
 
-                fields = _parse_desc(desc)
+@cache
+def get_pkg_info(db_file: Path, pkg_name: str) -> PkgInfo | None:
+    """Return package information for a specific package from a pacman repository database.
 
-                return PkgInfo(
-                    name=fields["NAME"][0],
-                    base=fields.get("BASE", [""])[0],
-                    version=fields["VERSION"][0],
-                    desc=fields.get("DESC", [""])[0],
-                    url=fields.get("URL", [""])[0],
-                    licenses=fields.get("LICENSE", []),
-                    arch=fields["ARCH"][0],
-                    build_date=int(fields["BUILDDATE"][0]),
-                    packager=fields.get("PACKAGER", [""])[0],
-                    compressed_size=int(fields.get("CSIZE", ["0"])[0]),
-                    installed_size=int(fields.get("ISIZE", ["0"])[0]),
-                    sha256=fields.get("SHA256SUM", [""])[0],
-                    dependencies=fields.get("DEPENDS", []),
-                    optional_dependencies=fields.get("OPTDEPENDS", []),
-                    make_dependencies=fields.get("MAKEDEPENDS", []),
-                    check_dependencies=fields.get("CHECKDEPENDS", []),
-                    provides=fields.get("PROVIDES", []),
-                    conflicts=fields.get("CONFLICTS", []),
-                    replaces=fields.get("REPLACES", []),
-                    groups=fields.get("GROUPS", []),
-                )
+    Returns None if the package is not found.
+    """
+    repo = get_repo_pkgs(db_file)
 
-    except (gzip.BadGzipFile, tarfile.TarError, OSError) as e:
-        raise RuntimeError(f"Failed to read '{db_file}': {e}") from e
+    for pkg in repo.packages:
+        if pkg.name == pkg_name:
+            return pkg
 
-    raise LookupError(
-        f"Package '{pkg_name}' not found in repository database '{db_file}'."
-    )
+    return None
+
+
+@cache
+def get_repo_pkg_count(db_file: Path) -> int:
+    """Count packages in a db file"""
+    if not db_file.exists():
+        raise FileNotFoundError(f"Database file '{db_file}' does not exist.")
+
+    with tarfile.open(db_file, "r:*") as tar:
+        return sum(1 for member in tar.getmembers() if member.name.endswith("/desc"))
 
 
 def update_database(build_arch_dir: Path, db_name: str, packages: list[str]) -> None:

@@ -64,6 +64,14 @@ body {
     border-radius: 12px;
 }
 
+#install-step {
+    min-width: 0;
+}
+
+#install-step .font-monospace {
+    min-width: 0;
+}
+
 /* Package Table & Viewport Adaptability */
 .table-responsive {
     /*
@@ -155,4 +163,16 @@ body {
 .time-separator {
     opacity: 0.5;
     margin: 0 0.25rem;
+}
+
+.empty-msg-row,
+.empty-msg-row > td {
+    background-color: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+tbody:has(tr:not(.empty-msg-row)) .empty-msg-row {
+    display: none;
 }

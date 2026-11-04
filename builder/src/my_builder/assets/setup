@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-set -e
+set -eu
 
 # ------------- Configuration ---------------
 
-REPO_NAME="{repo_name}"
-REPO_DISPLAY_NAME="{repo_display_name}"
-REPO_URL="{repo_url}"
-REPO_DWN_URL="{repo_downd_suffix}"
-PROJECT_URL="{project_url}"
+REPO_NAME="{{repo_name}}"
+REPO_DISPLAY_NAME="{{repo_display_name}}"
+REPO_URL="{{repo_url}}"
+REPO_DWN_URL="{{repo_down_suffix}}"
+SITE_URL="{{site_url}}"
 
 # --------------- Helpers -----------------
 

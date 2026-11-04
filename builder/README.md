@@ -7,29 +7,50 @@
 </div>
 <br/>
 
-MyBuilder is a tool to automate the compilation of AUR packages, with addition of generation of index website.
+MyBuilder is a command-line tool that builds configured AUR packages and generates the repository website.
+
+## Installation
+
+Install it with `uv`:
+
+```bash
+uv tool install /path/to/my-repo/builder
+```
+
+Or install it into an existing Python environment:
+
+```bash
+python -m pip install /path/to/my-repo/builder
+```
+
+After installation, the `my-builder` command is available.
+
+## Usage
+
+```bash
+my-builder --config config.yml build
+my-builder --config config.yml build-index
+my-builder --config config.yml build --package myctl
+```
+
+Run `my-builder --help` for the complete command reference.
 
 ## Configuration
 
 Below is full configuration example:
 
 ```yaml
-repo_name: my-repo
-repo_url: https://mydehq.github.io/my-repo
-project_url: https://github.com/mydehq/my-repo
+repo:
+  name: my-repo
+  url: https://github.com/mydehq/my-repo
 
-builder:
-  build_dir: build
-  dist_dir: dist
-  icon_file: src/icon.png
-
-  templates:
-    index: src/index.html
-    installer: src/install.sh
+site:
+  url: https://mydehq.github.io/my-repo
 
 packages:
   - myctl
   - mytm
-  - name: aur-helper
-    force: true # force compilation even if package is up-to-date
+  - kireisakura-kit|always
 ```
+
+The optional `|always` suffix forces a package to rebuild even when its version is unchanged.

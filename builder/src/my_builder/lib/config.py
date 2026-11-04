@@ -20,7 +20,7 @@ class RepoConfig:
     display_name: str = ""
     desc: str = "Automated AUR package builds."
     down_suffix: str = "/releases/download/repo"
-    install_cmd: str = "{repo_url}/setup"
+    install_cmd: str = defaults.install_cmd
     output_dir: Path = Path("build")
     clone_dir: Path = Path(defaults.data_dir) / "clone"
     packager: str | None = None
@@ -28,7 +28,6 @@ class RepoConfig:
     db_file: Path = field(init=False)
 
     def __post_init__(self) -> None:
-
         self.name = self.name.strip()
 
         if not self.display_name:
@@ -37,9 +36,6 @@ class RepoConfig:
         self.db_file = self.output_dir / f"{self.name}.tar.gz"
 
         self.output_dir = self.output_dir.expanduser().resolve()
-
-        if "{repo_url}" in self.install_cmd:
-            self.install_cmd = self.install_cmd.replace("{repo_url}", self.url)
 
 
 @dataclass(slots=True)
@@ -105,6 +101,12 @@ class Config:
 
         if not self.site.desc:
             self.site.desc = self.repo.desc
+
+        self.repo.install_cmd = self.repo.install_cmd.format(
+            site_url=self.site.url,
+            repo_url=self.repo.url,
+            packageer=self.repo.packager if self.repo.packager else None,
+        )
 
 
 class ConfigError(Exception):

@@ -2,13 +2,16 @@
 CLI routing & subcommand handler module using Python 3.14 pattern matching, dataclasses, and pathlib.
 """
 
-import glob
+import argparse
+import json
 import os
+import shlex
 import shutil
 import subprocess
-import sys
+from pathlib import Path
 
-from . import __version__
+from . import __app__name__, __version__
+from .defaults import defaults
 from .lib.aur import (
     AUR_CLONE_DIR,
     clone_package,
@@ -16,176 +19,190 @@ from .lib.aur import (
     get_actual_git_version,
 )
 from .lib.colors import color
-from .lib.config import CONFIG_FILE, load_config
+from .lib.config import ConfigError, load_config
 from .lib.logger import log
 from .lib.pkgbuild import build_package
-from .lib.repo import cleanup, get_repo_version, migrate_database, update_database
-from .lib.site import generate_site
+from .lib.repo import cleanup, get_pkg_info, migrate_database, update_database
+from .lib.site import SiteGenerationError, generate_site
 
 ARCH = "x86_64"
 
 
-def print_help() -> None:
-    print("Usage: python -m builder <command> [flags]")
-    print()
-    print("Commands:")
-    print(
-        "  build        Build packages from config.json and update repository database"
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=__app__name__,
+        description="Build AUR packages and generate the repository website.",
     )
-    print(
-        "  build-index  Generate repository landing page and installer in dist directory"
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"Builder {__version__}",
     )
-    print()
-    print("Flags:")
-    print("  -h, --help     Print this help message")
-    print("  -v, --version  Print version information")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=defaults.config_file,
+        help="Path to the YAML configuration file (default: config.yml)",
+    )
+
+    commands = parser.add_subparsers(dest="command", metavar="COMMAND")
+    build_command = commands.add_parser("build", help="Build configured AUR packages")
+    build_command.add_argument(
+        "--package",
+        action="append",
+        dest="packages",
+        metavar="NAME",
+        help="Build only this configured package; may be repeated",
+    )
+    commands.add_parser("build-index", help="Generate the repository website")
+    commands.add_parser("help", help=argparse.SUPPRESS)
+    return parser
 
 
-def run_build() -> None:
-    log.info("")
-    log.warn("Starting AUR package build process\n")
+def run_build_index(config_path: Path) -> int:
+    try:
+        config = load_config(config_path)
+    except ConfigError as e:
+        log.error(f"Failed to load config: {e}")
+        return 1
 
+    log.info(
+        f"Generating site from {'default' if config.site.input_dir == defaults.site_input_dir else config.site.input_dir.relative_to(Path.cwd())}..."
+    )
+    try:
+        generate_site(config)
+    except SiteGenerationError as e:
+        log.error(color.bold("Failed to generate site"), str(e))
+        return 1
+
+    log.success(
+        f"\nSite generated successfully in {config.site.output_dir.relative_to(Path.cwd())}"
+    )
+
+    return 0
+
+
+def run_build(config_path: Path, target_names: list[str] | None = None) -> int:
     if not shutil.which("makepkg"):
         log.error("makepkg is required but not installed")
-        sys.exit(1)
+        return 1
 
-    cfg = load_config()
-    build_dir = cfg.builder.build_dir
-    meta = cfg.meta
+    try:
+        config = load_config(config_path)
+    except ConfigError as e:
+        log.error(f"Failed to load config: {e}")
+        return 1
 
-    if not meta.repo_name:
-        log.error("meta.repo-name is required")
-        sys.exit(1)
+    build_dir = config.repo.output_dir
+    build_arch_dir = build_dir / ARCH
+    build_arch_dir.mkdir(parents=True, exist_ok=True)
 
-    target_dir = build_dir / ARCH
-    target_dir.mkdir(parents=True, exist_ok=True)
+    if not os.access(build_arch_dir, os.W_OK):
+        log.error(f"Build directory is not writable: {build_arch_dir}")
+        return 1
 
-    if not os.access(target_dir, os.W_OK):
-        log.error(f"Build directory is not writable: {target_dir}")
-        sys.exit(1)
+    target_text = os.environ.get("BUILD_TARGETS", "").strip()
+    if target_names is None and target_text:
+        try:
+            parsed_targets = json.loads(target_text)
+            target_names = parsed_targets if isinstance(parsed_targets, list) else []
+        except json.JSONDecodeError:
+            target_names = shlex.split(target_text)
+
+    if target_names is not None:
+        packages = [pkg for pkg in config.packages if pkg.name in target_names]
+        if not packages:
+            requested = ", ".join(target_names)
+            log.error(f"No configured packages matched: {requested}")
+            return 1
+    else:
+        packages = config.packages
+
+    repo_name = config.repo.name
+    db_file = build_arch_dir / f"{repo_name}.db.tar.gz"
+    migrate_database(build_arch_dir, repo_name)
+
+    package_names = [pkg.name for pkg in packages]
+    remote_versions = fetch_aur_versions(package_names)
+    built_pkg_files: list[str] = []
+    skipped_count = 0
+    failed_count = 0
 
     AUR_CLONE_DIR.mkdir(parents=True, exist_ok=True)
 
-    migrate_database(target_dir, meta.repo_name)
+    for package in packages:
+        log.info(f"Processing package: {color.yellow(package.name)}")
+        repo_info = get_pkg_info(db_file, package.name)
+        repo_version = repo_info.version if repo_info else ""
+        aur_version = remote_versions.get(package.name, "")
 
-    package_names = [p.name for p in cfg.packages]
-
-    log.info(f"Found {len(cfg.packages)} packages in {CONFIG_FILE}")
-    log.info("Fetching upstream versions from AUR...")
-
-    remote_versions = fetch_aur_versions(package_names)
-
-    skipped_count = 0
-    failed_count = 0
-    built_pkg_files: list[str] = []
-
-    for pkg in cfg.packages:
-        log.info("")
-        log.info(f"Processing package: {color.yellow(pkg.name)}")
-
-        db_file = build_dir / ARCH / f"{meta.repo_name}.db.tar.gz"
-        repo_version = get_repo_version(db_file, pkg.name)
-        aur_version = remote_versions.get(pkg.name, "")
-
-        if pkg.name.endswith("-git"):
-            actual_version = get_actual_git_version(pkg.name)
+        if package.name.endswith("-git"):
+            actual_version = get_actual_git_version(package.name)
             if actual_version:
                 aur_version = actual_version
 
-        log.info(f"     AUR  version: {aur_version or '<unknown>'}")
-        log.info(f"     Repo version: {repo_version or '<not in repo>'}")
-
-        needs_build = False
-
-        if not aur_version:
-            if repo_version:
-                log.warn("Could not get version from AUR API. Keeping repo version.")
-            else:
-                log.warn("Package not found in AUR API.")
-                needs_build = True
-
-        elif not repo_version:
-            log.warn("Package not in repo, downloading...")
-            needs_build = True
-
-        elif repo_version != aur_version:
-            log.warn("Version mismatch, updating...")
-            needs_build = True
-
-        elif pkg.force:
-            log.warn("Force flag set, rebuilding...")
-            needs_build = True
-
-        else:
-            pattern = str(build_dir / ARCH / f"{pkg.name}-{repo_version}-*.pkg.tar.*")
-            matches = glob.glob(pattern)
-
-            if not matches:
-                log.warn("Package file missing, rebuilding...")
-                needs_build = True
-            else:
-                log.info("Up-to-date, skipping")
+        needs_build = package.force or not repo_version or repo_version != aur_version
+        if not needs_build:
+            existing = list(build_arch_dir.glob(f"{package.name}-{repo_version}-*.pkg.tar.*"))
+            if existing:
                 skipped_count += 1
+                log.info("Up-to-date, skipping")
+                continue
+            needs_build = True
 
-        if needs_build:
-            try:
-                pkg_dir = clone_package(pkg.name)
-                files = build_package(pkg_dir, build_dir, ARCH)
-                built_pkg_files.extend(files)
-            except (RuntimeError, FileNotFoundError, subprocess.SubprocessError) as e:
-                log.error(f"Build failed for {pkg.name}: {e}")
-                failed_count += 1
+        if not needs_build:
+            continue
 
-    log.info("")
+        try:
+            package_dir = clone_package(package.name)
+            built_pkg_files.extend(build_package(package_dir, build_dir, ARCH))
+        except (FileNotFoundError, RuntimeError, subprocess.SubprocessError, OSError) as e:
+            log.error(f"Build failed for {package.name}: {e}")
+            failed_count += 1
 
     if built_pkg_files:
-        update_database(build_dir / ARCH, meta.repo_name, built_pkg_files)
-    else:
-        log.info("Repository update not needed")
+        update_database(build_arch_dir, repo_name, built_pkg_files)
 
-    cleanup(AUR_CLONE_DIR, build_dir, ARCH, meta.repo_name, package_names)
-
-    log.info("")
-    log.info("Build Summary:")
-    log.success(f"   Built:   {len(built_pkg_files)}")
-    log.info(f"   Skipped: {skipped_count}")
-    log.error(f"   Failed:  {failed_count}")
-
-    if failed_count > 0:
-        log.error(f"Build failed for {failed_count} packages")
-        sys.exit(1)
-    else:
-        log.success("Build completed successfully\n")
+    cleanup(AUR_CLONE_DIR, build_dir, ARCH, repo_name, package_names)
+    log.success(f"Built: {len(built_pkg_files)}; skipped: {skipped_count}; failed: {failed_count}")
+    return 1 if failed_count else 0
 
 
-def run_build_index() -> None:
-    cfg = load_config()
-    generate_site(cfg)
+"""
+Why use return codes and SystemExit?
+
+To allow the CLI to return a specific exit code to the caller.
+Makes program flow explicit:
+    1. Run main().
+    2. Get its exit code.
+    3. Exit the process with that code.
+"""
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        print_help()
-        sys.exit(0)
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
 
-    arg = sys.argv[1]
+    if args.command in (None, "help"):
+        parser.print_help()
+        return 0
+    if args.command == "build":
+        return run_build(args.config, args.packages)
+    if args.command == "build-index":
+        return run_build_index(args.config)
 
-    match arg:
-        case "-h" | "--help" | "help":
-            print_help()
-            sys.exit(0)
+    parser.error(f"unknown command: {args.command}")
+    return 2
 
-        case "-v" | "--version" | "version":
-            print(f"Builder v{__version__}")
-            sys.exit(0)
 
-        case "build":
-            run_build()
+def cli() -> None:
+    """Entrypoint for the command-line interface."""
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        log.error("Interrupted by user!")
+        raise SystemExit(130)
 
-        case "build-index":
-            run_build_index()
 
-        case _:
-            print(f"Unknown command or flag: {arg}")
-            print_help()
-            sys.exit(1)
+if __name__ == "__main__":
+    cli()

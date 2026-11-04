@@ -1,11 +1,12 @@
 [project]
 name = "my-builder"
 version = "0.0.1"
-description = "Add your description here"
+description = "Build AUR packages and generate an Arch repository website"
 readme = "README.md"
 authors = [
     { name = "Soumadip Das", email = "soumadip+github@zohomail.in" }
 ]
+keywords = ["aur", "archlinux", "package-builder", "repository"]
 
 requires-python = ">=3.14"
 dependencies = [
@@ -13,7 +14,10 @@ dependencies = [
 ]
 
 [project.scripts]
-my-builder = "my_builder.cli:main"
+my-builder = "my_builder.cli:cli"
+
+[project.urls]
+Repository = "https://github.com/mydehq/my-repo"
 
 
 [build-system]

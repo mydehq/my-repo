@@ -8,8 +8,9 @@ from . import __app__name__
 class Defaults:
     config_file: Path = Path("config.yml")
     data_dir: Path = Path(f".{__app__name__}")
+    site_input_dir: Path = Path(__file__).parent / "assets"
 
-    site_input_dir: Path = Path("assets")
+    install_cmd: str = "curl -fSL {site_url}/setup | bash"
 
     aur_url: str = "https://aur.archlinux.org"
     aur_pkg_url: str = field(init=False)
@@ -19,6 +20,9 @@ class Defaults:
 
     def __post_init__(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        (self.data_dir / "DO_NOT_EDIT").write_text(
+            "This directory shouldn't be edited/deleted manually"
+        )
 
         self.aur_url = self.aur_url.rstrip("/")
         self.aur_pkg_url = f"{self.aur_url}/packages"

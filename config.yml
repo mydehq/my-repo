@@ -2,8 +2,6 @@
 repo:
   name: my-repo
   url: https://github.com/mydehq/my-repo
-  display_name: My Repo # Default: repo.name
-  install_cmd: "{repo_url}/setup"
 
   # desc: "Automated AUR package builds."
   # down_suffix: "/releases/download/repo"    # '/' prefix must.
@@ -25,7 +23,6 @@ packages:
   - mpv-mpris2-bin
   - mpv-modernx
   - mpv-thumbfast-git
-  - ireader-bin
   - vicinae-bin
   - catppuccin-cursors-macchiato
   - vorta-root
@@ -33,7 +30,6 @@ packages:
   - git-credential-keepassxc-bin
   - catnap
   - python-textual-fastdatatable
-  - sqlit
   - autotitle
   - kireisakura-kit|always # '|' separated options:
 #                             always - always compile even if no update

@@ -1,7 +1,8 @@
-/aur
-/build
-/dist
+aur/
+build/
+dist/
 *cache/
 test.py
 ss.py
 logs
+.my-builder/

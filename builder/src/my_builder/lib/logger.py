@@ -6,7 +6,7 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 from sys import stderr
-from typing import Literal, TextIO
+from typing import Any, Literal, TextIO, TypedDict, Unpack
 
 from ..defaults import defaults
 from .colors import color
@@ -119,29 +119,47 @@ class Logger:
         self.log_file: Path | None = log_file
         self.log_stream: TextIO | None = log_stream
 
-    def __print_log(self, lvn: LogLevel, msg: str, bold: bool = False) -> None:
+    class LogOptions(TypedDict, total=False):
+        bold: bool
+        sep: str
+        end: str | None
+        file: TextIO | None
+        log_file_only: bool
 
-        if lvn not in self.LEVELS:
-            raise LogLevelError(lvn, list(self.LEVELS))
+    def __print_log(
+        self,
+        lvl: LogLevel,
+        *msgs: Any,
+        **opts: Unpack[LogOptions],
+    ) -> None:
 
-        level, lcolor, prefix = self.LEVELS[lvn]
+        bold = opts.get("bold", False)
+        sep = opts.get("sep", " ")
+        end = opts.get("end", "\n")
+        file = opts.get("file", None)
+        log_file_only = opts.get("log_file_only", False)
 
-        if level < self.min_level:
-            return
+        if lvl not in self.LEVELS:
+            raise LogLevelError(lvl, list(self.LEVELS))
 
-        clr = getattr(color, lcolor)  # pyright: ignore[reportAny]
+        level, lcolor, prefix = self.LEVELS[lvl]
 
-        print(
-            f"{clr(prefix, bold=True)} {clr(msg, bold)}",
-            file=stderr if lvn == "error" else None,
-        )
+        msg: str = sep.join(str(m) for m in msgs)
 
-        current_time = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        # don't print if level is below min level or explicitly disabled
+        if level >= self.min_level or not log_file_only:
+            clr = getattr(color, lcolor)
+
+            msg = clr(prefix, bold=True) + color.bold(msg) if bold else msg
+
+            print(msg, end=end, file=file)
+
+        current_time: str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
         if self.log_stream:
             try:
                 self.log_stream.write(  # pyright: ignore[reportUnusedCallResult]
-                    f"[{current_time}] {lvn.upper():<{self.max_level_width}} {msg}\n"
+                    f"[{current_time}] {lvl.upper():<{self.max_level_width}} {msg}\n"
                 )
                 self.log_stream.flush()
 
@@ -159,20 +177,23 @@ class Logger:
                 self.log_stream = None
                 self.log_file = None
 
-    def info(self, msg: str, bold: bool = False) -> None:
-        self.__print_log("info", msg, bold)
+    # Define log level methods
 
-    def success(self, msg: str, bold: bool = False) -> None:
-        self.__print_log("success", msg, bold)
+    def debug(self, *msg: Any, **opts: Unpack[LogOptions]) -> None:
+        self.__print_log("debug", *msg, **opts)
 
-    def warn(self, msg: str, bold: bool = False) -> None:
-        self.__print_log("warn", msg, bold)
+    def info(self, *msgs: Any, **opts: Unpack[LogOptions]) -> None:
+        self.__print_log("info", *msgs, **opts)
 
-    def error(self, msg: str, bold: bool = False) -> None:
-        self.__print_log("error", msg, bold)
+    def success(self, *msgs: str, **opts: Unpack[LogOptions]) -> None:
+        self.__print_log("success", *msgs, **opts)
 
-    def debug(self, msg: str, bold: bool = False) -> None:
-        self.__print_log("debug", msg, bold)
+    def warn(self, *msgs: str, **opts: Unpack[LogOptions]) -> None:
+        self.__print_log("warn", *msgs, **opts)
+
+    def error(self, *msgs: str, **opts: Unpack[LogOptions]) -> None:
+        opts.setdefault("file", stderr)
+        self.__print_log("error", *msgs, **opts)
 
 
 log: Logger = Logger()

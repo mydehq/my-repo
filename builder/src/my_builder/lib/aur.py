@@ -77,7 +77,7 @@ def get_actual_git_version(pkg_name: str) -> str:
 
     try:
         pkg_dir = clone_package(pkg_name)
-    except RuntimeError, FileNotFoundError, subprocess.SubprocessError:
+    except (RuntimeError, FileNotFoundError, subprocess.SubprocessError):
         return ""
 
     pkgbuild = pkg_dir / "PKGBUILD"
@@ -88,5 +88,5 @@ def get_actual_git_version(pkg_name: str) -> str:
     try:
         out = subprocess.check_output(["bash", "-c", bash_cmd], text=True).strip()
         return out
-    except subprocess.SubprocessError, OSError:
+    except (subprocess.SubprocessError, OSError):
         return ""

@@ -50,6 +50,7 @@ def install_deps(pkg_dir: Path) -> None:
         raise RuntimeError("Failed to install build dependencies")
 
 
+# TODO: Add packager support. Warn if not set.
 def build_package(pkg_dir: Path, build_dir: Path, arch: str) -> list[str]:
     install_deps(pkg_dir)
 

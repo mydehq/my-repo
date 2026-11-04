@@ -4,8 +4,8 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>{repo_name}</title>
-        <meta name="description" content="{repo_desc}" />
+        <title>{{repo_display_name}}</title>
+        <meta name="description" content="{{repo_desc}}" />
         <meta name="theme-color" content="#1e1e2e" />
 
         <!-- Local Assets -->
@@ -29,13 +29,13 @@
                         height="28"
                         class="rounded shadow-sm"
                     />
-                    <span id="navbar-title">{repo_name}</span>
+                    <span id="navbar-title">{{repo_display_name}}</span>
                 </a>
 
                 <a
                     class="nav-link fw-semibold text-subtext ms-auto d-flex align-items-center gap-2"
                     title="Source Code"
-                    href="{repo_url}"
+                    href="{{repo_url}}"
                     target="_blank"
                 >
                     <svg class="bi" width="20" height="20" fill="currentColor">
@@ -49,7 +49,7 @@
         <main class="container py-4 flex-grow-1">
             <!-- Repo Overview Section -->
             <section id="overview" class="mb-5 mt-2">
-                <p class="text-subtext mb-4 text-center">{repo_desc}</p>
+                <p class="text-subtext mb-4 text-center">{{repo_desc}}</p>
                 <div
                     id="repo-state"
                     class="row g-3 p-3 repo-config-box rounded-3 text-center text-break mb-2 ms-0 me-0 pt-0 mt-0"
@@ -62,7 +62,7 @@
                             >Packages</span
                         >
                         <span class="stat-value text-sapphire"
-                            >{pkg_count}</span
+                            >{{repo_pkg_count}}</span
                         >
                     </div>
                     <div
@@ -72,7 +72,7 @@
                             class="stat-header d-block text-uppercase small text-subtext fw-bolder mb-1"
                             >Repo Name</span
                         >
-                        <span class="stat-value text-mauve">{repo_name}</span>
+                        <span class="stat-value text-mauve">{{repo_name}}</span>
                     </div>
                     <div class="col-4">
                         <span
@@ -80,7 +80,7 @@
                             >Last Updated</span
                         >
                         <span class="stat-value text-green" id="last-updated"
-                            >{last_updated}</span
+                            >{{last_updated}}</span
                         >
                     </div>
                 </div>
@@ -95,15 +95,18 @@
                 </h2>
 
                 <div
-                    class="repo-config-box p-3 d-flex justify-content-between align-items-center"
+                    class="repo-config-box w-100 p-3 d-flex justify-content-between align-items-center"
                     id="install-step"
                 >
                     <div
-                        class="font-monospace small text-center text-green text-nowrap overflow-x-auto no-scrollbar"
+                        class="font-monospace small flex-grow-1 text-center text-green text-nowrap overflow-x-auto no-scrollbar"
                     >
-                        {repo_install_cmd}
+                        {{repo_install_cmd}}
                     </div>
-                    <button class="copy-btn ms-2" aria-label="Copy command">
+                    <button
+                        class="btn btn-link p-0 copy-btn ms-2 flex-shrink-0"
+                        aria-label="Copy command"
+                    >
                         <svg
                             class="bi"
                             width="16"
@@ -152,18 +155,38 @@
                             </tr>
                         </thead>
                         <tbody>
+                            <!-- Empty State Message -->
+                            <tr class="empty-msg-row">
+                                <td
+                                    colspan="3"
+                                    class="text-center py-5 text-subtext"
+                                >
+                                    <svg
+                                        class="bi mb-2 d-block mx-auto opacity-50"
+                                        width="32"
+                                        height="32"
+                                        fill="currentColor"
+                                    >
+                                        <use href="src/icons.svg#icon-box" />
+                                    </svg>
+                                    <div>No packages available</div>
+                                </td>
+                            </tr>
+
                             <!-- ROW_TEMPLATE_START -->
                             <tr>
                                 <td class="ps-3 text-start">
                                     <code>
-                                        <a href="{pkg_aur_url}">{pkg_name}</a>
+                                        <a href="{{pkg_aur_url}}"
+                                            >{{pkg_name}}</a
+                                        >
                                     </code>
                                 </td>
                                 <td class="text-center text-subtext small">
-                                    {pkg_version}
+                                    {{pkg_version}}
                                 </td>
                                 <td class="pe-3 text-end text-subtext small">
-                                    {pkg_arch}
+                                    {{pkg_arch}}
                                 </td>
                             </tr>
                             <!-- ROW_TEMPLATE_END -->
@@ -177,8 +200,8 @@
         <footer class="border-top py-1">
             <p class="text-center small mb-0">
                 Built with
-                <a class="no-ul" href="{builder_url}" target="_blank"
-                    >{builder_name}</a
+                <a class="no-ul" href="{{builder_url}}" target="_blank"
+                    >{{builder_name}}</a
                 >
             </p>
         </footer>
