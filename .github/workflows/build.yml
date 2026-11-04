@@ -60,6 +60,9 @@ jobs:
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
           chown -R builder:builder .
+          if [ -n "${UV_CACHE_DIR:-}" ] && [ -d "$UV_CACHE_DIR" ]; then
+            chown -R builder:builder "$UV_CACHE_DIR"
+          fi
           chmod +x builder/src/my_builder/assets/setup
 
       - name: Fetch Existing Repository DB
