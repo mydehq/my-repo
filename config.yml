@@ -31,5 +31,6 @@ packages:
   - catnap
   - python-textual-fastdatatable
   - autotitle
+  - quikrun
   - kireisakura-kit|always # '|' separated options:
 #                             always - always compile even if no update
