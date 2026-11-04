@@ -7,7 +7,7 @@ set -eu
 REPO_NAME="{{repo_name}}"
 REPO_DISPLAY_NAME="{{repo_display_name}}"
 REPO_URL="{{repo_url}}"
-REPO_DWN_URL="{{repo_down_suffix}}"
+REPO_DWN_URL="{{repo_dwn_url}}"
 SITE_URL="{{site_url}}"
 
 # --------------- Helpers -----------------
@@ -72,14 +72,16 @@ remove_repo() {
 
 print_help() {
     echo
-    [[ "$1" != "-nh" ]] && echo -e "${BLUE}$REPO_DISPLAY_NAME Installer${NC}\n"
+    [[ "${1:-}" != "-nh" ]] && echo -e "${BLUE}$REPO_DISPLAY_NAME Installer${NC}\n"
     echo -e "${GREEN}Usage${NC}: $0 [-u, --uninstall] [-h, --help]"
 }
 
 
 # --------------- Execution -----------------
 
-case "$1" in
+uninstall=false
+
+case "${1:-}" in
     "")
         # Default behavior: run installation
         ;;
@@ -91,7 +93,7 @@ case "$1" in
         exit 0
         ;;
     *)
-        echo -e "\n${RED}Invalid option: $1${NC}"
+        echo -e "\n${RED}Invalid option: ${1:-}${NC}"
         print_help -nh
         exit 1
         ;;
@@ -174,7 +176,7 @@ log "Checking System Requirements..."
     exit 1
 }
 
-DISTRO_ID=$(source /etc/os-release && echo "${ID}:${ID_LIKE}")
+DISTRO_ID=$(source /etc/os-release && echo "${ID:-}:${ID_LIKE:-}")
 
 if [[ "$DISTRO_ID" != *arch* ]]; then
     log.err "Unsupported Distro: Only Arch Linux (& its derivatives) are supported."

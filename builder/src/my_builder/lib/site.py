@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
-from shutil import copy2
+from shutil import copy2, copymode
 
 from .. import __app__name__, __app_url__, __version__
 from ..defaults import defaults
@@ -129,12 +129,13 @@ def generate_site(cfg: Config) -> int:
         "builder_name": __app__name__,
         "builder_version": __version__,
         "builder_url": __app_url__,
-        "repo_name": cfg.site.name,
+        "repo_name": cfg.repo.name,
         "repo_display_name": cfg.repo.display_name,
-        "repo_url": cfg.site.url,
-        "repo_desc": cfg.site.desc,
+        "repo_url": cfg.repo.url,
+        "repo_desc": cfg.repo.desc,
         "repo_pkg_count": repo_pkg_count,
         "repo_down_suffix": cfg.repo.down_suffix,
+        "repo_dwn_url": f"{cfg.repo.url.rstrip('/')}{cfg.repo.down_suffix}",
         "repo_install_cmd": cfg.repo.install_cmd,
         "repo_packager": cfg.repo.packager,
         "last_updated": datetime.now(UTC).timestamp(),
@@ -178,6 +179,7 @@ def generate_site(cfg: Config) -> int:
 
         try:
             out_path.write_text(content, encoding="utf-8")
+            copymode(path, out_path)
         except OSError as e:
             raise SiteGenerationError(f"Failed to write output file: {out_path}") from e
 
