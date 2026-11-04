@@ -34,6 +34,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     container:
       image: archlinux:latest
 
@@ -51,6 +54,20 @@ jobs:
         uses: astral-sh/setup-uv@v9.0.0
         with:
           enable-cache: true
+
+      - name: Cache Cargo & Go
+        uses: actions/cache@v6
+        with:
+          path: |
+            .cargo/registry
+            .cargo/git
+            .cargo/target
+            .go/cache
+            .go/mod
+          key: build-deps-${{ hashFiles('config.yml') }}-${{ github.run_id }}
+          restore-keys: |
+            build-deps-${{ hashFiles('config.yml') }}-
+            build-deps-
 
       - name: Install my-builder
         run: |
