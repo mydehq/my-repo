@@ -102,19 +102,19 @@ jobs:
           DIST_DIR=$(python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).site.output_dir)" 2>/dev/null || echo "dist")
           ARCH="x86_64"
 
-          echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
-          echo "dist_dir=$DIST_DIR" >> $GITHUB_OUTPUT
+          echo "build_dir=$BUILD_DIR" >> "$GITHUB_OUTPUT"
+          echo "dist_dir=$DIST_DIR" >> "$GITHUB_OUTPUT"
 
           # Build the website index inside the dist/ folder
           su builder -c "my-builder --config config.yml build-index"
 
           cd "$BUILD_DIR/$ARCH"
 
-          NEW_PKGS=$(ls *.pkg.tar.zst 2>/dev/null | wc -l || true)
+          NEW_PKGS=$(find . -maxdepth 1 -type f -name '*.pkg.tar.zst' -print | wc -l)
 
           if [ "$NEW_PKGS" -eq 0 ]; then
             echo "No packages built. Skipping release update."
-            echo "updated=false" >> $GITHUB_OUTPUT
+            echo "updated=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -136,7 +136,7 @@ jobs:
             --notes "Automated package builds and repository index" \
             --clobber
             
-          echo "updated=true" >> $GITHUB_OUTPUT
+          echo "updated=true" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -147,22 +147,29 @@ jobs:
           ARCH="x86_64"
           TARGET_DIR="$BUILD_DIR/$ARCH"
 
-          echo "## Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ -d "$TARGET_DIR" ] && [ $(ls "$TARGET_DIR"/*.pkg.tar.zst 2>/dev/null | wc -l || true) -gt 0 ]; then
-            echo "### Built Packages" >> $GITHUB_STEP_SUMMARY
-            echo "| Package File | Size |" >> $GITHUB_STEP_SUMMARY
-            echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
-            for pkg in "$TARGET_DIR"/*.pkg.tar.zst; do
-              [ -f "$pkg" ] || continue
-              name=$(basename "$pkg")
-              size=$(du -h "$pkg" | cut -f1)
-              echo "| \`$name\` | $size |" >> $GITHUB_STEP_SUMMARY
-            done
-          else
-            echo "No new package binaries were compiled in this run." >> $GITHUB_STEP_SUMMARY
+          package_count=0
+          if [ -d "$TARGET_DIR" ]; then
+            package_count=$(find "$TARGET_DIR" -maxdepth 1 -type f -name '*.pkg.tar.zst' -print | wc -l)
           fi
+
+          {
+            echo "## Summary"
+            echo ""
+
+            if [ "$package_count" -gt 0 ]; then
+              echo "### Built Packages"
+              echo "| Package File | Size |"
+              echo "| --- | --- |"
+              for pkg in "$TARGET_DIR"/*.pkg.tar.zst; do
+                [ -f "$pkg" ] || continue
+                name=$(basename "$pkg")
+                size=$(du -h "$pkg" | cut -f1)
+                echo "| \`$name\` | $size |"
+              done
+            else
+              echo "No new package binaries were compiled in this run."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Pages
         if: steps.release.outputs.updated == 'true'
