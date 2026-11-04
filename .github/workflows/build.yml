@@ -51,7 +51,9 @@ jobs:
           enable-cache: true
 
       - name: Install my-builder
-        run: uv pip install --system ./builder
+        run: |
+          uv venv --python 3.14 /opt/my-builder-venv
+          uv pip install --python /opt/my-builder-venv/bin/python ./builder
 
       - name: Configure Build User & Permissions
         run: |
@@ -62,7 +64,7 @@ jobs:
 
       - name: Fetch Existing Repository DB
         run: |
-          BUILD_DIR=$(python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).repo.output_dir)" 2>/dev/null || echo "build")
+          BUILD_DIR=$(/opt/my-builder-venv/bin/python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).repo.output_dir)" 2>/dev/null || echo "build")
           ARCH="x86_64"
 
           mkdir -p "$BUILD_DIR/$ARCH"
@@ -87,7 +89,7 @@ jobs:
           fi
 
           # Run Python package builder as unprivileged user
-          su builder -c "my-builder --config config.yml build"
+          su builder -c "/opt/my-builder-venv/bin/my-builder --config config.yml build"
         env:
           CARGO_HOME: ${{ github.workspace }}/.cargo
           CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo/target
@@ -97,16 +99,16 @@ jobs:
       - name: Update Database & Sync to Single Release
         id: release
         run: |
-          REPO_NAME=$(python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).repo.name)" 2>/dev/null || echo "")
-          BUILD_DIR=$(python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).repo.output_dir)" 2>/dev/null || echo "build")
-          DIST_DIR=$(python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).site.output_dir)" 2>/dev/null || echo "dist")
+          REPO_NAME=$(/opt/my-builder-venv/bin/python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).repo.name)" 2>/dev/null || echo "")
+          BUILD_DIR=$(/opt/my-builder-venv/bin/python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).repo.output_dir)" 2>/dev/null || echo "build")
+          DIST_DIR=$(/opt/my-builder-venv/bin/python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).site.output_dir)" 2>/dev/null || echo "dist")
           ARCH="x86_64"
 
           echo "build_dir=$BUILD_DIR" >> "$GITHUB_OUTPUT"
           echo "dist_dir=$DIST_DIR" >> "$GITHUB_OUTPUT"
 
           # Build the website index inside the dist/ folder
-          su builder -c "my-builder --config config.yml build-index"
+          su builder -c "/opt/my-builder-venv/bin/my-builder --config config.yml build-index"
 
           cd "$BUILD_DIR/$ARCH"
 
@@ -143,7 +145,7 @@ jobs:
       - name: Generate Job Summary
         if: always()
         run: |
-          BUILD_DIR=$(python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).repo.output_dir)" 2>/dev/null || echo "build")
+          BUILD_DIR=$(/opt/my-builder-venv/bin/python -c "from my_builder.defaults import defaults; from my_builder.lib.config import load_config; print(load_config(defaults.config_file).repo.output_dir)" 2>/dev/null || echo "build")
           ARCH="x86_64"
           TARGET_DIR="$BUILD_DIR/$ARCH"
 
