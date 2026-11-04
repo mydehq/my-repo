@@ -136,10 +136,12 @@ jobs:
 
           # Push/update the single 'repo' release
           echo "Publishing to single 'repo' GitHub Release..."
-          gh release create repo ./* \
+
+          gh release create repo \
             --title "Custom Arch Repository" \
-            --notes "Automated package builds and repository index" \
-            --clobber
+            --notes "Automated package builds and repository index" 2>/dev/null || true
+
+          gh release upload repo ./* --clobber
             
           echo "updated=true" >> "$GITHUB_OUTPUT"
         env:
