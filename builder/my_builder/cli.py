@@ -14,6 +14,7 @@ from . import __app__name__, __version__
 from .defaults import defaults
 from .lib.aur import (
     AUR_CLONE_DIR,
+    AurRpcError,
     clone_package,
     fetch_aur_versions,
     get_actual_git_version,
@@ -146,7 +147,18 @@ def run_build(
     migrate_database(build_arch_dir, repo_name)
 
     package_names = [pkg.name for pkg in packages]
-    remote_versions = fetch_aur_versions(package_names)
+    try:
+        remote_versions = fetch_aur_versions(package_names)
+    except AurRpcError as e:
+        log.error(str(e))
+        return 1
+
+    missing_packages = [pkg.name for pkg in packages if pkg.name not in remote_versions]
+    if missing_packages:
+        for name in missing_packages:
+            log.error(f"Package '{name}' not found on AUR")
+        return 1
+
     built_pkg_files: list[str] = []
     summary_entries: list[dict[str, str]] = []
     skipped_count = 0
@@ -158,12 +170,12 @@ def run_build(
         log.info(f"Processing package: {color.yellow(package.name)}")
         repo_info = get_pkg_info(db_file, package.name)
         repo_version = repo_info.version if repo_info else ""
-        aur_version = remote_versions.get(package.name, "")
+        aur_version = remote_versions[package.name]
 
         if package.name.endswith("-git"):
-            actual_version = get_actual_git_version(package.name)
-            if actual_version:
-                aur_version = actual_version
+            # For -git packages, check upstream for new commits instead of
+            # trusting the stale AUR API / static PKGBUILD version.
+            aur_version = get_actual_git_version(package.name, repo_version)
 
         needs_build = package.force or not repo_version or repo_version != aur_version
         if not needs_build and rebuild_missing:
@@ -221,8 +233,25 @@ def run_build(
     if built_pkg_files:
         update_database(build_arch_dir, repo_name, built_pkg_files)
 
-    cleanup(AUR_CLONE_DIR, build_dir, ARCH, repo_name, package_names)
-    log.success(f"Built: {len(built_pkg_files)}; skipped: {skipped_count}; failed: {failed_count}")
+    removed_pkgs = cleanup(AUR_CLONE_DIR, build_dir, ARCH, repo_name, package_names)
+
+    if removed_pkgs:
+        removed_file = build_dir / "removed-packages.json"
+        try:
+            removed_file.write_text(json.dumps(removed_pkgs, indent=2), encoding="utf-8")
+        except OSError as e:
+            log.warn(f"Failed to write removed packages file: {e}")
+
+    if built_pkg_files or removed_pkgs:
+        try:
+            (build_dir / ".db-updated").touch()
+        except OSError:
+            pass
+
+    log.success(
+        f"Built: {len(built_pkg_files)}; skipped: {skipped_count}; failed: {failed_count}"
+        + (f"; removed: {len(removed_pkgs)}" if removed_pkgs else "")
+    )
     return 1 if failed_count else 0
 
 

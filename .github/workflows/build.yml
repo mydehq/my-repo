@@ -137,8 +137,8 @@ jobs:
 
           NEW_PKGS=$(find . -maxdepth 1 -type f -name '*.pkg.tar.zst' -print | wc -l)
 
-          if [ "$NEW_PKGS" -eq 0 ]; then
-            echo "No packages built. Skipping release update."
+          if [ "$NEW_PKGS" -eq 0 ] && [ ! -f "$GITHUB_WORKSPACE/$BUILD_DIR/.db-updated" ]; then
+            echo "No packages built or removed. Skipping release update."
             echo "updated=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -149,10 +149,42 @@ jobs:
 
           # Clean up superseded asset versions from the single release tag
           for new_pkg in *.pkg.tar.zst; do
+            [ -f "$new_pkg" ] || continue
             base_name=$(echo "$new_pkg" | sed -E 's/-[0-9].*//')
             echo "Removing older builds of $base_name from 'repo' release..."
             gh release view repo --json assets --jq ".assets[].name" 2>/dev/null | grep "^${base_name}-[0-9]" | grep -v "$new_pkg" | xargs -I {} gh release delete-asset repo "{}" -y || true
           done
+
+          # Clean up assets for packages no longer configured in config.yml
+          /opt/my-builder-venv/bin/python - <<EOF
+          import subprocess
+          from pathlib import Path
+          from my_builder.lib.config import load_config
+
+          try:
+              config = load_config(Path("${GITHUB_WORKSPACE}/config.yml"))
+              valid_names = {p.name for p in config.packages}
+
+              res = subprocess.run(
+                  ["gh", "release", "view", "repo", "--json", "assets", "--jq", ".assets[].name"],
+                  capture_output=True,
+                  text=True,
+                  check=False,
+              )
+              if res.returncode == 0:
+                  for asset in res.stdout.splitlines():
+                      asset = asset.strip()
+                      if not (asset.endswith(".pkg.tar.zst") or asset.endswith(".pkg.tar.xz")):
+                          continue
+                      ext = ".pkg.tar.zst" if asset.endswith(".pkg.tar.zst") else ".pkg.tar.xz"
+                      base = asset[:-len(ext)]
+                      parts = base.rsplit("-", 3)
+                      if len(parts) == 4 and parts[0] not in valid_names:
+                          print(f"Removing unconfigured package '{parts[0]}' ({asset}) from release...")
+                          subprocess.run(["gh", "release", "delete-asset", "repo", asset, "-y"], check=False)
+          except Exception as e:
+              print(f"Warning: Failed to clean up release assets: {e}")
+          EOF
 
           # Push/update the single 'repo' release
           echo "Publishing to single 'repo' GitHub Release..."
@@ -227,6 +259,18 @@ jobs:
                   lines.append(f"| **{item['name']}** | {old_display} | {new_display} | {item['size']} |")
           else:
               lines.append("No new package binaries were compiled in this run.")
+
+          removed_file = build_dir / "removed-packages.json"
+          if removed_file.exists():
+              try:
+                  removed_pkgs = json.loads(removed_file.read_text(encoding="utf-8"))
+                  if removed_pkgs:
+                      lines.append("")
+                      lines.append("### Removed Packages")
+                      for rpkg in removed_pkgs:
+                          lines.append(f"- \`{rpkg}\`")
+              except Exception:
+                  pass
 
           with open(step_summary, "a", encoding="utf-8") as f:
               f.write("\n".join(lines) + "\n")

@@ -251,8 +251,7 @@ def cleanup(
     arch: str,
     repo_name: str,
     valid_pkgs: list[str],
-) -> None:
-
+) -> list[str]:
     log.info("")
     log.info("Cleaning up AUR cache...")
     if aur_clone_dir.exists():
@@ -265,7 +264,21 @@ def cleanup(
     build_arch_dir = build_dir / arch
 
     if not build_arch_dir.exists():
-        return
+        return []
+
+    pkgs_to_remove: set[str] = set()
+    db_file = build_arch_dir / f"{repo_name}.db.tar.gz"
+    valid_set = set(valid_pkgs)
+
+    # Check for packages in repository DB that are no longer configured
+    if db_file.exists():
+        repo_info = get_repo_pkgs(db_file)
+        for pkg in repo_info.packages:
+            if pkg.name not in valid_set:
+                log.warn(
+                    f"Package '{pkg.name}' in repository DB is not in config, marking for removal"
+                )
+                pkgs_to_remove.add(pkg.name)
 
     latest_pkg_files: dict[str, str] = {}
     latest_pkg_times: dict[str, float] = {}
@@ -288,8 +301,6 @@ def cleanup(
                     ):
                         latest_pkg_files[pkg_name] = name
                         latest_pkg_times[pkg_name] = mtime
-
-    pkgs_to_remove: set[str] = set()
 
     for item in build_arch_dir.iterdir():
         if item.is_dir():
@@ -321,19 +332,29 @@ def cleanup(
                     log.warn(f"Removing old version: {name}")
                 else:
                     log.warn(f"Removing stale artifact: {name}")
-                if extracted_name:
+                if extracted_name and not is_valid:
                     pkgs_to_remove.add(extracted_name)
             else:
                 log.warn(f"Removing junk file: {name}")
 
             item.unlink(missing_ok=True)
 
-    db_file = f"{repo_name}.db.tar.gz"
+    db_file_name = f"{repo_name}.db.tar.gz"
 
-    for pkg_to_remove in pkgs_to_remove:
+    for pkg_to_remove in sorted(pkgs_to_remove):
+        log.info(f"Removing '{pkg_to_remove}' from database...")
         subprocess.run(
-            ["repo-remove", db_file, pkg_to_remove],
+            ["repo-remove", db_file_name, pkg_to_remove],
             cwd=build_arch_dir,
             capture_output=True,
             check=False,
         )
+
+    for f in build_arch_dir.glob("*.old"):
+        f.unlink(missing_ok=True)
+
+    if pkgs_to_remove:
+        get_repo_pkgs.cache_clear()
+        get_pkg_info.cache_clear()
+
+    return sorted(pkgs_to_remove)
