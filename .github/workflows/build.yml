@@ -9,7 +9,7 @@ on:
       - builder/**
 
   schedule:
-    - cron: "47 */8 * * *"
+    - cron: "47 */12 * * *"
 
   workflow_dispatch:
     inputs:
