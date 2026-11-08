@@ -34,12 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
         description="Build AUR packages and generate the repository website.",
     )
     parser.add_argument(
-        "--version",
+        '-v', "--version",
         action="version",
         version=f"Builder {__version__}",
     )
     parser.add_argument(
-        "--config",
+        "-c", "--config",
         type=Path,
         default=defaults.config_file,
         help="Path to the YAML configuration file (default: config.yml)",
@@ -48,14 +48,21 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", metavar="COMMAND")
     build_command = commands.add_parser("build", help="Build configured AUR packages")
     build_command.add_argument(
-        "--package",
+        '-p', "--package",
         action="append",
         dest="packages",
         metavar="NAME",
         help="Build only this configured package; may be repeated",
     )
+    build_command.add_argument(
+        '-r', "--rebuild-missing",
+        action="store_true",
+        help="Rebuild package if binary file is missing from build directory",
+    )
     commands.add_parser("build-index", help="Generate the repository website")
-    commands.add_parser("help", help=argparse.SUPPRESS)
+    help_command = commands.add_parser("help", help="Show help message and exit")
+    help_command.add_argument("topic", nargs="?", help=argparse.SUPPRESS)
+
     return parser
 
 

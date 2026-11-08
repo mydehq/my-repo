@@ -1,6 +1,6 @@
 [project]
 name = "my-builder"
-version = "0.0.1"
+version = "0.0.0"
 description = "Build AUR packages and generate an Arch repository website"
 readme = "README.md"
 authors = [
