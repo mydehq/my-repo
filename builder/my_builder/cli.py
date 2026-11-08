@@ -28,6 +28,18 @@ from .lib.site import SiteGenerationError, generate_site
 ARCH = "x86_64"
 
 
+def extract_pkg_version(pkg_name: str, filename: str) -> str:
+    for ext in (".pkg.tar.zst", ".pkg.tar.xz", ".pkg.tar.gz"):
+        if filename.endswith(ext):
+            base = filename[: -len(ext)]
+            parts = base.rsplit("-", 1)  # strip arch
+
+            if len(parts) == 2 and parts[0].startswith(f"{pkg_name}-"):
+                return parts[0][len(pkg_name) + 1 :]
+
+    return ""
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=__app__name__,
@@ -136,6 +148,7 @@ def run_build(
     package_names = [pkg.name for pkg in packages]
     remote_versions = fetch_aur_versions(package_names)
     built_pkg_files: list[str] = []
+    summary_entries: list[dict[str, str]] = []
     skipped_count = 0
     failed_count = 0
 
@@ -165,10 +178,45 @@ def run_build(
 
         try:
             package_dir = clone_package(package.name)
-            built_pkg_files.extend(build_package(package_dir, build_dir, ARCH))
+            files = build_package(package_dir, build_dir, ARCH)
+            built_pkg_files.extend(files)
+
+            for file_name in files:
+                file_path = build_arch_dir / file_name
+                size_str = ""
+                if file_path.exists():
+                    size_bytes = float(file_path.stat().st_size)
+                    for unit in ["B", "KiB", "MiB", "GiB"]:
+                        if size_bytes < 1024 or unit == "GiB":
+                            size_str = (
+                                f"{size_bytes:.1f} {unit}"
+                                if unit != "B"
+                                else f"{int(size_bytes)} B"
+                            )
+                            break
+                        size_bytes /= 1024
+
+                new_version = (
+                    extract_pkg_version(package.name, file_name)
+                    or aur_version
+                    or "unknown"
+                )
+                summary_entries.append({
+                    "name": package.name,
+                    "old_version": repo_version or "*(new)*",
+                    "new_version": new_version,
+                    "filename": file_name,
+                    "size": size_str,
+                })
         except (FileNotFoundError, RuntimeError, subprocess.SubprocessError, OSError) as e:
             log.error(f"Build failed for {package.name}: {e}")
             failed_count += 1
+
+    summary_file = build_dir / "build-summary.json"
+    try:
+        summary_file.write_text(json.dumps(summary_entries, indent=2), encoding="utf-8")
+    except OSError as e:
+        log.warn(f"Failed to write build summary file: {e}")
 
     if built_pkg_files:
         update_database(build_arch_dir, repo_name, built_pkg_files)
