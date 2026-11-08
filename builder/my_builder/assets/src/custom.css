@@ -46,6 +46,16 @@ body {
 .text-green {
     color: var(--ctp-green) !important;
 }
+
+#last-updated {
+    display: inline-block;
+    transition: opacity 0.2s ease, text-decoration 0.2s ease;
+}
+
+#last-updated:hover {
+    text-decoration: underline !important;
+    opacity: 0.85;
+}
 .text-subtext {
     color: var(--ctp-subtext) !important;
 }

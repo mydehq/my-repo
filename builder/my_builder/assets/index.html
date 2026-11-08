@@ -79,8 +79,14 @@
                             class="stat-header d-block text-uppercase small text-subtext fw-bolder mb-1"
                             >Last Updated</span
                         >
-                        <span class="stat-value text-green" id="last-updated"
-                            >{{last_updated}}</span
+                        <a
+                            href="{{ci_run_url}}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="stat-value text-green text-decoration-none"
+                            id="last-updated"
+                            title="View CI workflow run"
+                            >{{last_updated}}</a
                         >
                     </div>
                 </div>

@@ -1,6 +1,5 @@
 [tools]
 actionlint = "latest"
 "npm:live-server" = "latest"
-"pipx:quikrun" = "latest"
 ruff = "latest"
 uv = "latest"

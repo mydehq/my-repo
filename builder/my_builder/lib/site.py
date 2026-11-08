@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -125,6 +126,20 @@ def generate_site(cfg: Config) -> int:
             f"Database file not found: {cfg.repo.db_file}, Have You bulit repo?"
         ) from e
 
+    ci_run_url = os.environ.get("CI_RUN_URL", "").strip()
+
+    if not ci_run_url:
+        server_url = os.environ.get("GITHUB_SERVER_URL", "https://github.com").rstrip("/")
+        repository = os.environ.get("GITHUB_REPOSITORY", "").strip()
+        run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+
+        if repository and run_id:
+            ci_run_url = f"{server_url}/{repository}/actions/runs/{run_id}"
+        elif run_id and cfg.repo.url:
+            ci_run_url = f"{cfg.repo.url.rstrip('/')}/actions/runs/{run_id}"
+        elif cfg.repo.url:
+            ci_run_url = f"{cfg.repo.url.rstrip('/')}/actions"
+
     variables = {
         "builder_name": __app__name__,
         "builder_version": __version__,
@@ -139,6 +154,7 @@ def generate_site(cfg: Config) -> int:
         "repo_install_cmd": cfg.repo.install_cmd,
         "repo_packager": cfg.repo.packager,
         "last_updated": datetime.now(UTC).timestamp(),
+        "ci_run_url": ci_run_url,
         "site_url": cfg.site.url,
         "site_name": cfg.site.name,
         "site_desc": cfg.site.desc,
