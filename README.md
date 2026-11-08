@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="builder/src/my_builder/assets/icon.png" alt="MyRepo Logo" width="80">
+    <img src="builder/my_builder/assets/icon.png" alt="MyRepo Logo" width="80">
     <h1>My Repo</h1>
     <p>
         <b>Automated AUR package building and repository hosting.</b>
@@ -11,7 +11,7 @@
 ## Installation
 
 > [!WARNING]
-> This repository is x86_64 only.
+> This repository is x86_64/any only.
 
 Run the following command to add the repository:
 
@@ -19,43 +19,27 @@ Run the following command to add the repository:
 curl -sL https://mydehq.github.io/my-repo/install | bash
 ```
 
+## Package Information
+
+For Package list, Update time; view [Dashboard](https://mydehq.github.io/my-repo)
+
 ## Adding Packages in repo
 
-Simply edit `config.yml` and add desired AUR package names:
+- Simply edit `config.yml` and add desired AUR package names:
 
-```yml
-packages:
-  aur:
-    - name: myctl
-    - name: vicinae-bin
-    - name: catppuccin-cursors-macchiato
-```
+    ```yml
+    packages:
+      aur:
+        - name: myctl
+        - name: vicinae-bin
+        - name: catppuccin-cursors-macchiato
+    ```
 
-The GitHub Action will automatically detect changes, build the packages, update the repository index, and regenerate the dashboard.
+- Then Open a pr.
+- Once merged, CI will auto detect changes, build the packages, update the repository.
 
 ---
 
-## Repository Structure
-
-```text
-my-repo/
-├── src/
-│   ├── builder              # Core build logic & site generator
-│   ├── index.html           # Dashboard template
-│   ├── repo-README.md       # Repo branch README
-│   ├── install.sh           # Repository installer script
-│   └── icon.png             # Repository icon
-├── config.yml               # Declarative package list
-├── .github/
-│   └── workflows/
-│       └── build.yml        # Automation pipeline
-└── README.md
-```
-
-## Technical Specification
-
-- **Build Environment**: Native Arch Linux (`archlinux:latest`) container.
-- **Build Logic**: Uses `makepkg` with dependency handling.
 
 ## Related Resources
 

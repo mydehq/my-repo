@@ -7,7 +7,6 @@ on:
       - .github/workflows/build.yml
       - config.yml
       - builder/**
-      - builder/src/**
 
   schedule:
     - cron: "47 */8 * * *"
@@ -83,7 +82,7 @@ jobs:
           if [ -n "${UV_CACHE_DIR:-}" ] && [ -d "$UV_CACHE_DIR" ]; then
             chown -R builder:builder "$UV_CACHE_DIR"
           fi
-          chmod +x builder/src/my_builder/assets/setup
+          chmod +x builder/my_builder/assets/setup
 
       - name: Fetch Existing Repository DB
         run: |
@@ -158,7 +157,7 @@ jobs:
           echo "Publishing to single 'repo' GitHub Release..."
 
           gh release create repo \
-            --title "Custom Arch Repository" \
+            --title "Arch Repo" \
             --notes "Automated package builds and repository index" 2>/dev/null || true
 
           gh release upload repo ./* --clobber

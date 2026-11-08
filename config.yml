@@ -32,5 +32,5 @@ packages:
   - python-textual-fastdatatable
   - autotitle
   - quikrun
-  - kireisakura-kit|always # '|' separated options:
+  - kireisakura-kit # '|' separated options:
 #                             always - always compile even if no update

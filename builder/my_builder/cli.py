@@ -89,7 +89,11 @@ def run_build_index(config_path: Path) -> int:
     return 0
 
 
-def run_build(config_path: Path, target_names: list[str] | None = None) -> int:
+def run_build(
+    config_path: Path,
+    target_names: list[str] | None = None,
+    rebuild_missing: bool = False,
+) -> int:
     if not shutil.which("makepkg"):
         log.error("makepkg is required but not installed")
         return 1
@@ -149,15 +153,14 @@ def run_build(config_path: Path, target_names: list[str] | None = None) -> int:
                 aur_version = actual_version
 
         needs_build = package.force or not repo_version or repo_version != aur_version
-        if not needs_build:
+        if not needs_build and rebuild_missing:
             existing = list(build_arch_dir.glob(f"{package.name}-{repo_version}-*.pkg.tar.*"))
-            if existing:
-                skipped_count += 1
-                log.info("Up-to-date, skipping")
-                continue
-            needs_build = True
+            if not existing:
+                needs_build = True
 
         if not needs_build:
+            skipped_count += 1
+            log.info("Up-to-date, skipping")
             continue
 
         try:
@@ -191,10 +194,18 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command in (None, "help"):
-        parser.print_help()
+        topic = getattr(args, "topic", None)
+        subparsers_action = next(
+            (action for action in parser._actions if isinstance(action, argparse._SubParsersAction)),
+            None,
+        )
+        if topic and subparsers_action and topic in subparsers_action.choices:
+            subparsers_action.choices[topic].print_help()
+        else:
+            parser.print_help()
         return 0
     if args.command == "build":
-        return run_build(args.config, args.packages)
+        return run_build(args.config, args.packages, args.rebuild_missing)
     if args.command == "build-index":
         return run_build_index(args.config)
 
