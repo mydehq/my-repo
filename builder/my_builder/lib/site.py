@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
@@ -130,6 +131,23 @@ def generate_site(cfg: Config) -> int:
         ) from e
 
     ci_run_url = os.environ.get("CI_RUN_URL", "").strip()
+    ci_run_hash = os.environ.get("CI_RUN_HASH", "").strip()
+
+    if not ci_run_hash:
+        ci_run_hash = os.environ.get("GITHUB_SHA", "").strip()
+
+    if not ci_run_hash:
+        try:
+            ci_run_hash = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+            ).strip()
+        except (subprocess.SubprocessError, OSError, TimeoutError):
+            ci_run_hash = "local"
+
+    ci_run_hash = ci_run_hash[:7]
 
     if not ci_run_url:
         server_url = os.environ.get("GITHUB_SERVER_URL", "https://github.com").rstrip("/")
@@ -158,6 +176,7 @@ def generate_site(cfg: Config) -> int:
         "repo_packager": cfg.repo.packager,
         "last_updated": datetime.now(UTC).timestamp(),
         "ci_run_url": ci_run_url,
+        "ci_run_hash": ci_run_hash,
         "site_url": cfg.site.url,
         "site_name": cfg.site.name,
         "site_desc": cfg.site.desc,

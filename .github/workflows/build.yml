@@ -137,7 +137,8 @@ jobs:
           echo "dist_dir=$DIST_DIR" >> "$GITHUB_OUTPUT"
 
           # Build the website index inside the dist/ folder
-          su builder -c "CI_RUN_URL='$CI_RUN_URL' /opt/my-builder-venv/bin/my-builder --config config.yml build-index"
+          CI_RUN_HASH="${GITHUB_SHA:0:7}"
+          su builder -c "CI_RUN_URL='$CI_RUN_URL' CI_RUN_HASH='$CI_RUN_HASH' /opt/my-builder-venv/bin/my-builder --config config.yml build-index"
 
           cd "$BUILD_DIR/$ARCH"
 
@@ -210,6 +211,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
           FORCE_INDEX: ${{ inputs.force_index }}
 
       - name: Generate Job Summary
