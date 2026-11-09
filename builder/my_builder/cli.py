@@ -200,7 +200,7 @@ def run_build(
 
         try:
             package_dir = clone_package(package.name)
-            files = build_package(package_dir, build_dir, ARCH)
+            files = build_package(package_dir, build_dir, ARCH, package.extra_pkgs)
             built_pkg_files.extend(files)
 
             for file_name in files:

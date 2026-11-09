@@ -71,20 +71,52 @@ class SiteConfig:
 class PackageSpec:
     name: str
     force: bool = False
-    options: dict[str, Any] = field(default_factory=dict)
+    extra_pkgs: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_str(cls, raw: str) -> Self:
-        parts = raw.split("|")
+    def from_mapping(cls, raw: dict[str, Any]) -> Self:
+        if len(raw) != 1:
+            raise ValueError("package mapping must contain exactly one package name")
+
+        name, options = next(iter(raw.items()))
+        if not isinstance(name, str):
+            raise TypeError("package name must be a string")
+        if not name.strip():
+            raise ValueError("package name must be a non-empty string")
+        if options is None:
+            options = {}
+        if not isinstance(options, dict):
+            raise TypeError(f"options for package {name!r} must be a mapping")
+
+        force = options.get("always", False)
+        if not isinstance(force, bool):
+            raise TypeError(f"always for package {name!r} must be a boolean")
+
+        extra_pkgs = options.get("extra_pkgs", [])
+        if not isinstance(extra_pkgs, list):
+            raise TypeError(f"extra_pkgs for package {name!r} must be a list")
+        if any(not isinstance(pkg, str) for pkg in extra_pkgs):
+            raise TypeError(f"extra_pkgs for package {name!r} must contain strings")
+        if any(not pkg.strip() for pkg in extra_pkgs):
+            raise ValueError(f"extra_pkgs for package {name!r} must be a list of names")
 
         return cls(
-            name=parts[0].strip(),
-            force=len(parts) > 1 and parts[1].strip() == "always",
+            name=name.strip(),
+            force=force,
+            extra_pkgs=[pkg.strip() for pkg in extra_pkgs],
         )
 
     @classmethod
-    def parse_list(cls, pkgs: list[str]) -> list[Self]:
-        return [cls.from_str(pkg) for pkg in pkgs]
+    def parse_list(cls, pkgs: list[Any]) -> list[Self]:
+        parsed: list[Self] = []
+        for pkg in pkgs:
+            if isinstance(pkg, str):
+                parsed.append(cls(name=pkg.strip()))
+            elif isinstance(pkg, dict):
+                parsed.append(cls.from_mapping(pkg))
+            else:
+                raise TypeError("each package must be a string or a package mapping")
+        return parsed
 
 
 @dataclass(slots=True)
@@ -138,7 +170,10 @@ def load_config(conf_file: Path) -> Config:
     repo: RepoConfig = RepoConfig(**raw_config.get("repo", {}))
     site: SiteConfig = SiteConfig(**raw_config.get("site", {}))
     aur: AURConfig = AURConfig(**raw_config.get("aur", {}))
-    packages: list[PackageSpec] = PackageSpec.parse_list(raw_config.get("packages", []))
+    try:
+        packages = PackageSpec.parse_list(raw_config.get("packages", []))
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"Invalid packages configuration: {exc}") from exc
 
     return Config(
         repo=repo,

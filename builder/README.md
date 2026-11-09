@@ -50,7 +50,16 @@ site:
 packages:
   - myctl
   - mytm
-  - kireisakura-kit|always
+  - kireisakura-kit:
+      always: true
+  - keypunch-git:
+      always: true
+      extra_pkgs: [cairo]
 ```
 
-The optional `|always` suffix forces a package to rebuild even when its version is unchanged.
+### Package options
+
+Add these optional settings under a package name in the `packages` list:
+
+- `always`: Set to `true` to rebuild the package even when its version is unchanged. Defaults to `false`.
+- `extra_pkgs`: A list of additional Arch packages to install before building. These are installed alongside the package's `makedepends`.

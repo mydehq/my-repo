@@ -9,7 +9,7 @@ from pathlib import Path
 from .logger import log
 
 
-def install_deps(pkg_dir: Path) -> None:
+def install_deps(pkg_dir: Path, extra_pkgs: list[str] | None = None) -> None:
     log.info("Checking for build dependencies")
 
     res = subprocess.run(
@@ -27,6 +27,9 @@ def install_deps(pkg_dir: Path) -> None:
         line = line.strip()
         if line.startswith("makedepends = "):
             makedeps.append(line.removeprefix("makedepends = "))
+
+    makedeps.extend(extra_pkgs or [])
+    makedeps = list(dict.fromkeys(makedep for makedep in makedeps if makedep))
 
     if not makedeps:
         log.info("No build dependencies found")
@@ -51,8 +54,13 @@ def install_deps(pkg_dir: Path) -> None:
 
 
 # TODO: Add packager support. Warn if not set.
-def build_package(pkg_dir: Path, build_dir: Path, arch: str) -> list[str]:
-    install_deps(pkg_dir)
+def build_package(
+    pkg_dir: Path,
+    build_dir: Path,
+    arch: str,
+    extra_pkgs: list[str] | None = None,
+) -> list[str]:
+    install_deps(pkg_dir, extra_pkgs)
 
     log.info(f"Running makepkg in {pkg_dir}")
 

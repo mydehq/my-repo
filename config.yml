@@ -19,7 +19,6 @@ packages:
   - myctl
   - mytm
   # - nautilus-dummy
-  - keypunch-git
   - nsticky-bin
   - mpv-mpris2-bin
   - mpv-modernx
@@ -33,5 +32,6 @@ packages:
   - python-textual-fastdatatable
   - autotitle
   - quikrun
-  - kireisakura-kit # '|' separated options:
-#                             always - always compile even if no update
+  - kireisakura-kit
+  - keypunch-git:
+      extra_pkgs: [cairo]
