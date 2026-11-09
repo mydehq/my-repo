@@ -121,6 +121,10 @@ def run_build(
     build_arch_dir = build_dir / ARCH
     build_arch_dir.mkdir(parents=True, exist_ok=True)
 
+    # Clean up state files from previous runs
+    for stale_file in ("missing-packages.json", "removed-packages.json", "build-summary.json", ".db-updated"):
+        (build_dir / stale_file).unlink(missing_ok=True)
+
     if not os.access(build_arch_dir, os.W_OK):
         log.error(f"Build directory is not writable: {build_arch_dir}")
         return 1
@@ -154,9 +158,15 @@ def run_build(
         return 1
 
     missing_packages = [pkg.name for pkg in packages if pkg.name not in remote_versions]
+
     if missing_packages:
         for name in missing_packages:
             log.error(f"Package '{name}' not found on AUR")
+        missing_file = build_dir / "missing-packages.json"
+        try:
+            missing_file.write_text(json.dumps(missing_packages, indent=2), encoding="utf-8")
+        except OSError as e:
+            log.warn(f"Failed to write missing packages file: {e}")
         return 1
 
     built_pkg_files: list[str] = []

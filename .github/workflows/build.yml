@@ -243,6 +243,22 @@ jobs:
                           "size": size_str,
                       })
 
+          missing_file = build_dir / "missing-packages.json"
+          missing_pkgs = []
+          if missing_file.exists():
+              try:
+                  missing_pkgs = json.loads(missing_file.read_text(encoding="utf-8"))
+              except Exception:
+                  missing_pkgs = []
+
+          if missing_pkgs:
+              lines.append("### ❌ Packages Not Found on AUR")
+              lines.append("")
+              for mpkg in missing_pkgs:
+                  lines.append(f"- \`{mpkg}\`")
+              lines.append("")
+              lines.append('Please check the package names in `config.yml` or ensure they exist on the AUR.')
+
           if entries:
               lines.append("### Built Packages")
               lines.append("")
@@ -257,7 +273,7 @@ jobs:
                       new_display = f"\`{new_v}\`"
                   old_display = f"\`{old_v}\`" if old_v and old_v != "*(new)*" else "*(new)*"
                   lines.append(f"| **{item['name']}** | {old_display} | {new_display} | {item['size']} |")
-          else:
+          elif not missing_pkgs:
               lines.append("No new package binaries were compiled in this run.")
 
           removed_file = build_dir / "removed-packages.json"
