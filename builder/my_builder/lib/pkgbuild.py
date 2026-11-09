@@ -10,7 +10,7 @@ from .logger import log
 
 
 def install_deps(pkg_dir: Path, extra_pkgs: list[str] | None = None) -> None:
-    log.info("Checking for build dependencies")
+    log.info("Checking for package dependencies")
 
     res = subprocess.run(
         ["makepkg", "--printsrcinfo"],
@@ -20,37 +20,38 @@ def install_deps(pkg_dir: Path, extra_pkgs: list[str] | None = None) -> None:
         check=False,
     )
     if res.returncode != 0:
-        raise RuntimeError(f"failed to extract makedepends: {res.stderr}")
+        raise RuntimeError(f"failed to extract package dependencies: {res.stderr}")
 
-    makedeps: list[str] = []
+    dependencies: list[str] = []
     for line in res.stdout.splitlines():
         line = line.strip()
-        if line.startswith("makedepends = "):
-            makedeps.append(line.removeprefix("makedepends = "))
+        if line.startswith(("depends = ", "makedepends = ")):
+            dependencies.append(line.split(" = ", maxsplit=1)[1])
 
-    makedeps.extend(extra_pkgs or [])
-    makedeps = list(dict.fromkeys(makedep for makedep in makedeps if makedep))
+    dependencies.extend(extra_pkgs or [])
+    dependencies = list(dict.fromkeys(dependency for dependency in dependencies if dependency))
 
-    if not makedeps:
-        log.info("No build dependencies found")
+    if not dependencies:
+        log.info("No package dependencies found")
         return
 
     check_res = subprocess.run(
-        ["pacman", "-T"] + makedeps, capture_output=True, check=False
+        ["pacman", "-T"] + dependencies, capture_output=True, check=False
     )
 
     if check_res.returncode == 0:
-        log.info("Build dependencies already satisfied")
+        log.info("Package dependencies already satisfied")
         return
 
-    log.info(f"Installing missing dependencies: {' '.join(makedeps)}")
+    log.info(f"Installing missing dependencies: {' '.join(dependencies)}")
 
     inst_res = subprocess.run(
-        ["sudo", "pacman", "-S", "--noconfirm", "--needed"] + makedeps, check=False
+        ["sudo", "pacman", "-S", "--noconfirm", "--needed"] + dependencies,
+        check=False,
     )
 
     if inst_res.returncode != 0:
-        raise RuntimeError("Failed to install build dependencies")
+        raise RuntimeError("Failed to install package dependencies")
 
 
 # TODO: Add packager support. Warn if not set.

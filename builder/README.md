@@ -62,4 +62,4 @@ packages:
 Add these optional settings under a package name in the `packages` list:
 
 - `always`: Set to `true` to rebuild the package even when its version is unchanged. Defaults to `false`.
-- `extra_pkgs`: A list of additional Arch packages to install before building. These are installed alongside the package's `makedepends`.
+- `extra_pkgs`: A list of additional Arch packages to install before building. These are installed alongside the package's declared `depends` and `makedepends`.
