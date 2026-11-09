@@ -60,6 +60,11 @@ body {
     color: var(--ctp-subtext) !important;
 }
 
+/* Section Spacing */
+.content-section {
+    margin-bottom: 2.25rem;
+}
+
 /* Sticky Navbar */
 .doc-navbar {
     backdrop-filter: blur(30px);
@@ -72,6 +77,43 @@ body {
     background-color: var(--ctp-mantle);
     border: 1px solid var(--bs-border-color);
     border-radius: 12px;
+}
+
+/* Repo State / Key-Value Summary */
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.65rem 0.25rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.stat-item.order-3 {
+    border-bottom: none;
+    padding-bottom: 0.25rem;
+}
+
+.stat-item.order-1 {
+    padding-top: 0.25rem;
+}
+
+@media (min-width: 768px) {
+    .stat-item {
+        display: block;
+        text-align: center;
+        padding: 0.25rem 0;
+        border-bottom: none !important;
+        border-right: 1px solid var(--bs-border-color);
+    }
+
+    .stat-item.order-md-3 {
+        border-right: none;
+    }
+
+    .stat-header {
+        display: block;
+        margin-bottom: 0.25rem;
+    }
 }
 
 #install-step {
@@ -94,10 +136,11 @@ body {
     background-color: var(--ctp-mantle);
     border: 1px solid var(--bs-border-color);
     border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .table tbody tr {
-    height: 3rem; /* Fixed height per row for consistent scaling calculation */
+    min-height: 3.25rem;
 }
 
 .package-name {
@@ -113,6 +156,10 @@ body {
 
 #packages td a {
     text-decoration: none !important;
+}
+
+#packages td code a {
+    font-weight: 700;
 }
 
 .badge-version {
@@ -180,13 +227,137 @@ body {
 }
 
 .empty-msg-row,
-.empty-msg-row > td {
+.empty-msg-row > td,
+.no-results-row,
+.no-results-row > td {
     background-color: transparent !important;
     background-image: none !important;
     border: none !important;
     box-shadow: none !important;
 }
 
-tbody:has(tr:not(.empty-msg-row)) .empty-msg-row {
+tbody:has(tr:not(.empty-msg-row):not(.no-results-row)) .empty-msg-row {
     display: none;
+}
+
+/* Package Search in Header Row */
+.pkg-search-wrap {
+    position: relative;
+}
+
+#pkg-search-btn {
+    color: var(--ctp-subtext);
+}
+
+#pkg-search-btn:hover {
+    color: var(--bs-primary);
+}
+
+.pkg-search-box {
+    display: none;
+    align-items: center;
+    background-color: var(--ctp-mantle);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.35);
+    border-radius: 8px;
+    padding: 2px 4px 2px 8px;
+    width: 220px;
+    animation: searchBoxFadeIn 0.15s ease-out;
+}
+
+.pkg-search-box.show {
+    display: flex !important;
+}
+
+.pkg-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 0;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #cdd6f4 !important;
+    padding: 2px 0 !important;
+    font-size: 0.85rem;
+}
+
+.pkg-search-input:focus {
+    outline: none;
+}
+
+.pkg-search-input::placeholder {
+    color: var(--ctp-subtext);
+    opacity: 0.6;
+}
+
+@keyframes searchBoxFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Package Description & Version */
+.pkg-desc,
+.pkg-meta {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pkg-desc {
+    opacity: 0.7;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    margin-top: 3px;
+}
+
+.pkg-meta {
+    font-family: monospace;
+    font-size: 0.76rem;
+    color: var(--ctp-subtext);
+    opacity: 0.75;
+    margin-top: 2px;
+}
+
+/* Row Action Buttons */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ctp-subtext);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none !important;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.btn-icon:active {
+    transform: scale(0.9);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 767.98px) {
+    .pkg-header-row.search-active .pkg-heading {
+        display: none !important;
+    }
+
+    .pkg-header-row.search-active .pkg-search-wrap,
+    .pkg-header-row.search-active .pkg-search-box {
+        width: 100% !important;
+    }
 }

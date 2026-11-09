@@ -16,8 +16,8 @@
 
     <body class="d-flex flex-column min-vh-100">
         <!-- Top Navbar -->
-        <nav class="navbar navbar-expand-lg sticky-top doc-navbar">
-            <div class="container px-4">
+        <nav class="navbar sticky-top doc-navbar">
+            <div class="container px-3 px-sm-4 d-flex align-items-center">
                 <a
                     class="navbar-brand d-flex align-items-center gap-3 fw-bolder text-primary"
                     href="#"
@@ -33,67 +33,65 @@
                 </a>
 
                 <a
-                    class="nav-link fw-semibold text-subtext ms-auto d-flex align-items-center gap-2"
+                    class="btn-icon nav-link text-subtext ms-auto flex-shrink-0"
                     title="Source Code"
                     href="{{repo_url}}"
                     target="_blank"
+                    aria-label="Source Code"
                 >
-                    <svg class="bi" width="20" height="20" fill="currentColor">
+                    <svg class="bi" width="18" height="18" fill="currentColor">
                         <use href="src/icons.svg#icon-github" />
                     </svg>
-                    <span class="d-none d-md-inline">Source Code</span>
                 </a>
             </div>
         </nav>
 
-        <main class="container py-4 flex-grow-1">
+        <main class="container px-3 px-sm-4 pt-3 pb-4 flex-grow-1">
             <!-- Repo Overview Section -->
-            <section id="overview" class="mb-5 mt-2">
-                <p class="text-subtext mb-4 text-center">{{repo_desc}}</p>
+            <section id="overview" class="content-section">
+                <p class="text-subtext mb-3 text-center">{{repo_desc}}</p>
                 <div
                     id="repo-state"
-                    class="row g-3 p-3 repo-config-box rounded-3 text-center text-break mb-2 ms-0 me-0 pt-0 mt-0"
+                    class="repo-config-box rounded-3 p-3"
                 >
-                    <div
-                        class="col-4 border-end border-white border-opacity-10"
-                    >
-                        <span
-                            class="stat-header d-block text-uppercase small text-subtext fw-bolder mb-1"
-                            >Packages</span
-                        >
-                        <span class="stat-value text-sapphire"
-                            >{{repo_pkg_count}}</span
-                        >
-                    </div>
-                    <div
-                        class="col-4 border-end border-white border-opacity-10"
-                    >
-                        <span
-                            class="stat-header d-block text-uppercase small text-subtext fw-bolder mb-1"
-                            >Repo Name</span
-                        >
-                        <span class="stat-value text-mauve">{{repo_name}}</span>
-                    </div>
-                    <div class="col-4">
-                        <span
-                            class="stat-header d-block text-uppercase small text-subtext fw-bolder mb-1"
-                            >Last Updated</span
-                        >
-                        <a
-                            href="{{ci_run_url}}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="stat-value text-green text-decoration-none"
-                            id="last-updated"
-                            title="View CI workflow run"
-                            >{{last_updated}}</a
-                        >
+                    <div class="row g-0 align-items-center">
+                        <div class="col-12 col-md-4 stat-item order-2 order-md-1">
+                            <span
+                                class="stat-header text-uppercase small text-subtext fw-bolder"
+                                >Packages</span
+                            >
+                            <span class="stat-value text-sapphire"
+                                >{{repo_pkg_count}}</span
+                            >
+                        </div>
+                        <div class="col-12 col-md-4 stat-item order-1 order-md-2">
+                            <span
+                                class="stat-header text-uppercase small text-subtext fw-bolder"
+                                >Repo Name</span
+                            >
+                            <span class="stat-value text-mauve">{{repo_name}}</span>
+                        </div>
+                        <div class="col-12 col-md-4 stat-item order-3 order-md-3">
+                            <span
+                                class="stat-header text-uppercase small text-subtext fw-bolder"
+                                >Last Updated</span
+                            >
+                            <a
+                                href="{{ci_run_url}}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="stat-value text-green text-decoration-none"
+                                id="last-updated"
+                                title="View CI workflow run"
+                                >{{last_updated}}</a
+                            >
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Installation Section -->
-            <section id="installation" class="mb-5">
+            <section id="installation" class="content-section">
                 <h2
                     class="h5 text-uppercase text-primary fw-bold mb-3 letter-spacing-1"
                 >
@@ -126,37 +124,81 @@
             </section>
 
             <!-- Packages Table Section -->
-            <section id="packages" class="mb-5">
-                <h2
-                    class="h5 text-uppercase text-primary fw-bolder mb-3 letter-spacing-1"
+            <section id="packages" class="content-section">
+                <div
+                    class="d-flex justify-content-between align-items-center mb-3 pkg-header-row position-relative"
                 >
-                    Available Packages
-                </h2>
+                    <h2
+                        class="h5 text-uppercase text-primary fw-bolder mb-0 letter-spacing-1 pkg-heading"
+                    >
+                        Available Packages
+                    </h2>
+                    <div class="pkg-search-wrap d-flex align-items-center">
+                        <button
+                            id="pkg-search-btn"
+                            class="btn-icon"
+                            aria-label="Search packages"
+                            title="Search packages (/)"
+                        >
+                            <svg
+                                class="bi"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
+                            >
+                                <use href="src/icons.svg#icon-search" />
+                            </svg>
+                        </button>
+                        <div
+                            id="pkg-search-box"
+                            class="pkg-search-box"
+                        >
+                            <input
+                                type="search"
+                                id="pkg-search"
+                                class="form-control form-control-sm pkg-search-input"
+                                placeholder="Search packages..."
+                                autocomplete="off"
+                            />
+                            <button
+                                id="pkg-search-close"
+                                class="btn-icon ms-1"
+                                aria-label="Close search"
+                                title="Close search (Esc)"
+                            >
+                                <svg
+                                    class="bi"
+                                    width="14"
+                                    height="14"
+                                    fill="currentColor"
+                                >
+                                    <use href="src/icons.svg#icon-x" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <div
                     class="table-responsive overflow-y-auto border border-white border-opacity-10 rounded shadow-sm"
                     style="max-height: 360px"
                 >
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 w-100" style="table-layout: fixed">
                         <thead class="sticky-top table-dark">
                             <tr>
                                 <th
                                     scope="col"
-                                    class="py-3 ps-3 text-primary text-uppercase small"
+                                    class="py-3 ps-3 text-primary text-uppercase small text-truncate"
+                                    style="width: calc(100% - 76px)"
                                 >
                                     Package Name
                                 </th>
                                 <th
                                     scope="col"
-                                    class="py-3 text-center text-primary text-uppercase small"
-                                >
-                                    Version
-                                </th>
-                                <th
-                                    scope="col"
                                     class="py-3 pe-3 text-end text-primary text-uppercase small"
+                                    style="width: 76px"
                                 >
-                                    Arch
+                                    Actions
                                 </th>
                             </tr>
                         </thead>
@@ -164,7 +206,7 @@
                             <!-- Empty State Message -->
                             <tr class="empty-msg-row">
                                 <td
-                                    colspan="3"
+                                    colspan="2"
                                     class="text-center py-5 text-subtext"
                                 >
                                     <svg
@@ -179,20 +221,83 @@
                                 </td>
                             </tr>
 
+                            <!-- No Search Results (hidden by default) -->
+                            <tr class="no-results-row" style="display: none">
+                                <td
+                                    colspan="2"
+                                    class="text-center py-5 text-subtext"
+                                >
+                                    <svg
+                                        class="bi mb-2 d-block mx-auto opacity-50"
+                                        width="32"
+                                        height="32"
+                                        fill="currentColor"
+                                    >
+                                        <use href="src/icons.svg#icon-search" />
+                                    </svg>
+                                    <div>No packages match your search</div>
+                                </td>
+                            </tr>
+
                             <!-- ROW_TEMPLATE_START -->
-                            <tr>
-                                <td class="ps-3 text-start">
-                                    <code>
-                                        <a class="no-ul" href="{{pkg_aur_url}}"
+                            <tr data-pkg="{{pkg_name}}">
+                                <td class="ps-3 text-start text-truncate" style="overflow: hidden; max-width: 0">
+                                    <code class="d-inline-block text-truncate mw-100 align-bottom">
+                                        <a
+                                            class="no-ul fw-bold"
+                                            href="{{pkg_aur_url}}"
+                                            target="_blank"
                                             >{{pkg_name}}</a
                                         >
                                     </code>
+                                    <div
+                                        class="pkg-desc text-subtext small text-truncate"
+                                        title="{{pkg_desc}}"
+                                    >
+                                        {{pkg_desc}}
+                                    </div>
+                                    <div
+                                        class="pkg-meta text-subtext small text-truncate"
+                                    >{{pkg_version}} <span class="opacity-50">({{pkg_arch}})</span></div>
                                 </td>
-                                <td class="text-center text-subtext small">
-                                    {{pkg_version}}
-                                </td>
-                                <td class="pe-3 text-end text-subtext small">
-                                    {{pkg_arch}}
+                                <td class="pe-3 text-end" style="width: 76px; white-space: nowrap">
+                                    <div
+                                        class="d-inline-flex align-items-center gap-1"
+                                    >
+                                        <button
+                                            class="btn-icon pkg-copy-btn"
+                                            data-pkg="{{pkg_name}}"
+                                            title="Copy: sudo pacman -S {{pkg_name}}"
+                                        >
+                                            <svg
+                                                class="bi"
+                                                width="14"
+                                                height="14"
+                                                fill="currentColor"
+                                            >
+                                                <use
+                                                    href="src/icons.svg#icon-copy"
+                                                />
+                                            </svg>
+                                        </button>
+                                        <a
+                                            class="btn-icon"
+                                            href="{{pkg_dwn_url}}"
+                                            title="Download {{pkg_filename}}"
+                                            download
+                                        >
+                                            <svg
+                                                class="bi"
+                                                width="14"
+                                                height="14"
+                                                fill="currentColor"
+                                            >
+                                                <use
+                                                    href="src/icons.svg#icon-download"
+                                                />
+                                            </svg>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             <!-- ROW_TEMPLATE_END -->

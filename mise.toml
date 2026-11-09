@@ -3,3 +3,6 @@ actionlint = "latest"
 "npm:live-server" = "latest"
 ruff = "latest"
 uv = "latest"
+
+[env]
+'_'.path = { path = 'builder/.venv/bin' }

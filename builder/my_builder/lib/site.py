@@ -80,6 +80,7 @@ def gen_pkg_list(pkg_template: str, cfg: Config) -> str:
 
     entries: list[str] = []
     pkgs = get_repo_pkgs(cfg.repo.db_file)
+    repo_dwn_base = f"{cfg.repo.url.rstrip('/')}{cfg.repo.down_suffix}".rstrip("/")
 
     for pkg in pkgs.packages:
         entries.append(
@@ -92,6 +93,8 @@ def gen_pkg_list(pkg_template: str, cfg: Config) -> str:
                     "pkg_url": pkg.url,
                     "pkg_aur_url": f"{defaults.aur_pkg_url}/{pkg.name}",
                     "pkg_arch": pkg.arch,
+                    "pkg_filename": pkg.filename,
+                    "pkg_dwn_url": f"{repo_dwn_base}/{pkg.filename}",
                 },
                 strict=False,
             )
