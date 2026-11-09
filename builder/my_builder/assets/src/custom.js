@@ -32,6 +32,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const originalLabel = btn.getAttribute("aria-label");
     const alreadyGreen = btn.classList.contains("text-green");
 
+    if (iconUse) iconUse.setAttribute("href", "src/icons.svg#icon-check");
+    btn.classList.add("text-green", "animate-pop");
+
     try {
       try {
         if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
@@ -49,9 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!copied) throw new Error("Clipboard copy failed");
       }
 
-      if (iconUse) iconUse.setAttribute("href", "src/icons.svg#icon-check");
-      btn.classList.add("text-green");
-      btn.classList.add("animate-pop");
     } catch {
       if (iconUse) iconUse.setAttribute("href", "src/icons.svg#icon-x");
       btn.setAttribute("title", "Copy failed");
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
       else btn.setAttribute("title", originalTitle);
       if (originalLabel === null) btn.removeAttribute("aria-label");
       else btn.setAttribute("aria-label", originalLabel);
-    }, 2000);
+    }, 3000);
   }
 
   // ── Install command copy ──

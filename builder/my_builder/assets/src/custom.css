@@ -225,22 +225,7 @@ body {
     background: rgba(var(--bs-primary-rgb), 0.6);
 }
 
-/* Copy Button & Animations */
-.copy-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--ctp-subtext);
-    padding: 4px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.copy-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-}
-
+/* Copy Button Animation */
 @keyframes pop {
     0%,
     100% {
