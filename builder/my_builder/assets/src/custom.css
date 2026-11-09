@@ -257,6 +257,10 @@ tbody:has(tr:not(.empty-msg-row):not(.no-results-row)) .empty-msg-row {
 }
 
 /* Package Search in Header Row */
+.pkg-header-row {
+    scroll-margin-top: 4.5rem;
+}
+
 .pkg-search-wrap {
     position: relative;
 }

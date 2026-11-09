@@ -101,15 +101,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchBtn = document.getElementById("pkg-search-btn");
   const searchClose = document.getElementById("pkg-search-close");
   const headerRow = document.querySelector(".pkg-header-row");
+  const tableScroller = document.querySelector("#packages .table-responsive");
 
-  function openSearch() {
+  function openSearch({ focusInput = true, scrollIntoView = true } = {}) {
     if (!searchBox) return;
     headerRow?.classList.add("search-active");
     if (searchBtn) searchBtn.style.display = "none";
     searchBox.style.display = "flex";
     searchBox.classList.add("show");
-    searchInput?.focus();
-    searchInput?.select();
+
+    if (focusInput) {
+      searchInput?.focus({ preventScroll: true });
+      searchInput?.select();
+    }
+
+    if (scrollIntoView) {
+      headerRow?.scrollIntoView({ behavior: "smooth", block: "start" });
+      tableScroller?.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   function closeSearch() {
@@ -121,6 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (searchInput) {
       searchInput.value = "";
       filterPackages("");
+      updateSearchUrl("");
     }
     searchBtn?.focus();
   }
@@ -149,6 +159,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function updateSearchUrl(rawQuery) {
+    const url = new URL(window.location.href);
+    const query = rawQuery.trim();
+
+    if (query) url.searchParams.set("search", query);
+    else url.searchParams.delete("search");
+
+    window.history.replaceState(null, "", url);
+  }
+
   if (searchBtn) {
     searchBtn.addEventListener("click", openSearch);
   }
@@ -175,6 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (searchInput) {
     searchInput.addEventListener("input", () => {
       filterPackages(searchInput.value);
+      updateSearchUrl(searchInput.value);
 
       // Smoothly scroll to packages table on search if scrolled away
       if (searchInput.value.trim()) {
@@ -184,5 +205,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     });
+
+    const initialQuery = new URLSearchParams(window.location.search)
+      .get("search")
+      ?.trim();
+    if (initialQuery) {
+      searchInput.value = initialQuery;
+      openSearch({ focusInput: false, scrollIntoView: false });
+      filterPackages(initialQuery);
+    }
   }
 });
