@@ -19,6 +19,7 @@ packages:
   - myctl
   - mytm
   # - nautilus-dummy
+  - keypunch-git
   - nsticky-bin
   - mpv-mpris2-bin
   - mpv-modernx
