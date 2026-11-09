@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const originalHref = iconUse?.getAttribute("href");
     const originalTitle = btn.getAttribute("title");
     const originalLabel = btn.getAttribute("aria-label");
+    const alreadyGreen = btn.classList.contains("text-green");
 
     try {
       try {
@@ -49,6 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (iconUse) iconUse.setAttribute("href", "src/icons.svg#icon-check");
+      btn.classList.add("text-green");
       btn.classList.add("animate-pop");
     } catch {
       if (iconUse) iconUse.setAttribute("href", "src/icons.svg#icon-x");
@@ -59,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btn._resetTimer) clearTimeout(btn._resetTimer);
     btn._resetTimer = setTimeout(() => {
       if (iconUse && originalHref) iconUse.setAttribute("href", originalHref);
+      if (!alreadyGreen) btn.classList.remove("text-green");
       btn.classList.remove("animate-pop");
       if (originalTitle === null) btn.removeAttribute("title");
       else btn.setAttribute("title", originalTitle);
