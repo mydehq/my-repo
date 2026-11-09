@@ -18,6 +18,12 @@ on:
         required: false
         default: ""
 
+      force_index:
+        description: "Rebuild and publish the site index without package changes"
+        type: boolean
+        required: false
+        default: false
+
   repository_dispatch:
     types: [trigger-build]
 
@@ -138,8 +144,13 @@ jobs:
           NEW_PKGS=$(find . -maxdepth 1 -type f -name '*.pkg.tar.zst' -print | wc -l)
 
           if [ "$NEW_PKGS" -eq 0 ] && [ ! -f "$GITHUB_WORKSPACE/$BUILD_DIR/.db-updated" ]; then
-            echo "No packages built or removed. Skipping release update."
-            echo "updated=false" >> "$GITHUB_OUTPUT"
+            if [ "$FORCE_INDEX" = "true" ]; then
+              echo "No package changes. Publishing the rebuilt site index."
+              echo "updated=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No packages built or removed. Skipping release update."
+              echo "updated=false" >> "$GITHUB_OUTPUT"
+            fi
             exit 0
           fi
 
@@ -199,6 +210,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FORCE_INDEX: ${{ inputs.force_index }}
 
       - name: Generate Job Summary
         if: always()
