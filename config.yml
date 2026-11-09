@@ -3,7 +3,7 @@ repo:
   name: my-repo
   url: https://github.com/mydehq/my-repo
 
-  # desc: "Automated AUR package builds."
+  desc: "Semi Automated Arch package Repo."
   # down_suffix: "/releases/download/repo"    # '/' prefix must.
   # output_dir: build
   # clone_dir: .my-builder/clones

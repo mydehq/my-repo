@@ -22,6 +22,22 @@ body {
     background-color: var(--bs-body-bg);
     color: #cdd6f4;
     min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+}
+
+.site-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#packages {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    margin-bottom: 0;
 }
 
 .no-ul {
@@ -63,6 +79,10 @@ body {
 /* Section Spacing */
 .content-section {
     margin-bottom: 2.25rem;
+}
+
+.content-section h2 {
+    padding-left: 0.5rem;
 }
 
 /* Sticky Navbar */
@@ -126,13 +146,9 @@ body {
 
 /* Package Table & Viewport Adaptability */
 .table-responsive {
-    /*
-       Guarantees space for header (~48px) + 5 rows (~48px each) = ~288px (18rem).
-       If viewport height shrinks further, min-height forces page overflow
-       so the table scrolls naturally downwards instead of disappearing.
-    */
+    flex: 1 1 0;
     min-height: 18rem;
-    height: auto;
+    overflow-y: auto;
     background-color: var(--ctp-mantle);
     border: 1px solid var(--bs-border-color);
     border-radius: 8px;
@@ -352,6 +368,22 @@ tbody:has(tr:not(.empty-msg-row):not(.no-results-row)) .empty-msg-row {
 
 /* Mobile Adjustments */
 @media (max-width: 767.98px) {
+    .content-section {
+        margin-bottom: 1rem;
+    }
+
+    #packages {
+        margin-bottom: 1rem;
+    }
+
+    #packages .table-responsive {
+        min-height: 0;
+    }
+
+    .content-section h2 {
+        font-size: 1rem;
+    }
+
     .pkg-header-row.search-active .pkg-heading {
         display: none !important;
     }
