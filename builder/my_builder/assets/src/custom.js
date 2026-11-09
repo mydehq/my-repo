@@ -82,9 +82,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ── Per-row install copy (event delegation) ──
-  const tbody = document.querySelector("#packages tbody");
-  if (tbody) {
-    tbody.addEventListener("click", (e) => {
+  const packageList = document.getElementById("package-list");
+  if (packageList) {
+    packageList.addEventListener("click", (e) => {
       const btn = e.target.closest(".pkg-copy-btn");
       if (!btn) return;
 
@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchBtn = document.getElementById("pkg-search-btn");
   const searchClose = document.getElementById("pkg-search-close");
   const headerRow = document.querySelector(".pkg-header-row");
-  const tableScroller = document.querySelector("#packages .table-responsive");
+  const packageScroller = packageList;
 
   function openSearch({ focusInput = true, scrollIntoView = true } = {}) {
     if (!searchBox) return;
@@ -117,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (scrollIntoView) {
       headerRow?.scrollIntoView({ behavior: "smooth", block: "start" });
-      tableScroller?.scrollTo({ top: 0, behavior: "smooth" });
+      packageScroller?.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
 
@@ -137,13 +137,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function filterPackages(rawQuery) {
     const query = (rawQuery || "").toLowerCase().trim();
-    const tableBody = document.querySelector("#packages tbody");
-    if (!tableBody) return;
+    if (!packageList) return;
 
-    const noResultsRow = tableBody.querySelector(".no-results-row");
-    const pkgRows = tableBody.querySelectorAll(
-      "tr:not(.empty-msg-row):not(.no-results-row)"
-    );
+    const noResultsRow = packageList.querySelector(".no-results-row");
+    const pkgRows = packageList.querySelectorAll(".pkg-row");
 
     let visibleCount = 0;
     pkgRows.forEach((row) => {
@@ -155,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (noResultsRow) {
       noResultsRow.style.display =
-        query && visibleCount === 0 ? "" : "none";
+        query && visibleCount === 0 ? "flex" : "none";
     }
   }
 
@@ -197,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
       filterPackages(searchInput.value);
       updateSearchUrl(searchInput.value);
 
-      // Smoothly scroll to packages table on search if scrolled away
+      // Smoothly scroll to the package list on search if scrolled away
       if (searchInput.value.trim()) {
         const pkgSection = document.getElementById("packages");
         if (pkgSection && window.scrollY < pkgSection.offsetTop - 120) {

@@ -123,7 +123,7 @@
                 </div>
             </section>
 
-            <!-- Packages Table Section -->
+            <!-- Packages List Section -->
             <section id="packages" class="content-section">
                 <div
                     class="d-flex justify-content-between align-items-center mb-3 pkg-header-row position-relative"
@@ -179,128 +179,78 @@
                     </div>
                 </div>
 
-                <div
-                    class="table-responsive overflow-y-auto border border-white border-opacity-10 rounded shadow-sm"
+                <ul
+                    id="package-list"
+                    class="package-list overflow-y-auto border border-white border-opacity-10 rounded shadow-sm list-unstyled mb-0"
+                    aria-label="Available packages"
                 >
-                    <table class="table table-hover align-middle mb-0 w-100" style="table-layout: fixed">
-                        <thead class="sticky-top table-dark">
-                            <tr>
-                                <th
-                                    scope="col"
-                                    class="py-2 ps-3 text-primary text-uppercase small text-truncate"
-                                    style="width: calc(100% - 76px)"
-                                >
-                                    Package Name
-                                </th>
-                                <th
-                                    scope="col"
-                                    class="py-2 pe-4 text-end text-primary text-uppercase small"
-                                    style="width: 76px"
-                                >
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Empty State Message -->
-                            <tr class="empty-msg-row">
-                                <td
-                                    colspan="2"
-                                    class="text-center py-5 text-subtext"
-                                >
-                                    <svg
-                                        class="bi mb-2 d-block mx-auto opacity-50"
-                                        width="32"
-                                        height="32"
-                                        fill="currentColor"
-                                    >
-                                        <use href="src/icons.svg#icon-box" />
-                                    </svg>
-                                    <div>No packages available</div>
-                                </td>
-                            </tr>
+                    <li class="package-list-state empty-msg-row text-center py-5 text-subtext">
+                        <svg
+                            class="bi mb-2 d-block mx-auto opacity-50"
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                        >
+                            <use href="src/icons.svg#icon-box" />
+                        </svg>
+                        <div>No packages available</div>
+                    </li>
 
-                            <!-- No Search Results (hidden by default) -->
-                            <tr class="no-results-row" style="display: none">
-                                <td
-                                    colspan="2"
-                                    class="text-center py-5 text-subtext"
-                                >
-                                    <svg
-                                        class="bi mb-2 d-block mx-auto opacity-50"
-                                        width="32"
-                                        height="32"
-                                        fill="currentColor"
-                                    >
-                                        <use href="src/icons.svg#icon-search" />
-                                    </svg>
-                                    <div>No packages match your search</div>
-                                </td>
-                            </tr>
+                    <li class="package-list-state no-results-row text-center py-5 text-subtext" style="display: none">
+                        <svg
+                            class="bi mb-2 d-block mx-auto opacity-50"
+                            width="32"
+                            height="32"
+                            fill="currentColor"
+                        >
+                            <use href="src/icons.svg#icon-search" />
+                        </svg>
+                        <div>No packages match your search</div>
+                    </li>
 
-                            <!-- ROW_TEMPLATE_START -->
-                            <tr data-pkg="{{pkg_name}}">
-                                <td class="ps-3 text-start text-truncate" style="overflow: hidden; max-width: 0">
-                                    <a
-                                        class="no-ul fw-bold d-inline-block text-truncate mw-100 align-bottom"
-                                        href="{{pkg_aur_url}}"
-                                        target="_blank"
-                                        >{{pkg_name}}</a
-                                    >
-                                    <div
-                                        class="pkg-desc text-subtext small text-truncate"
-                                        title="{{pkg_desc}}"
-                                    >
-                                        {{pkg_desc}}
-                                    </div>
-                                    <div
-                                        class="pkg-meta text-subtext small text-truncate"
-                                    >{{pkg_version}} <span class="opacity-50">({{pkg_arch}})</span></div>
-                                </td>
-                                <td class="pe-3 text-end" style="width: 76px; white-space: nowrap">
-                                    <div
-                                        class="d-inline-flex align-items-center gap-1"
-                                    >
-                                        <button
-                                            class="btn-icon pkg-copy-btn"
-                                            data-pkg="{{pkg_name}}"
-                                            title="Copy: sudo pacman -S {{pkg_name}}"
-                                        >
-                                            <svg
-                                                class="bi"
-                                                width="14"
-                                                height="14"
-                                                fill="currentColor"
-                                            >
-                                                <use
-                                                    href="src/icons.svg#icon-copy"
-                                                />
-                                            </svg>
-                                        </button>
-                                        <a
-                                            class="btn-icon"
-                                            href="{{pkg_dwn_url}}"
-                                            title="Download {{pkg_filename}}"
-                                            download
-                                        >
-                                            <svg
-                                                class="bi"
-                                                width="14"
-                                                height="14"
-                                                fill="currentColor"
-                                            >
-                                                <use
-                                                    href="src/icons.svg#icon-download"
-                                                />
-                                            </svg>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- ROW_TEMPLATE_END -->
-                        </tbody>
-                    </table>
-                </div>
+                    <!-- ROW_TEMPLATE_START -->
+                    <li class="pkg-row" data-pkg="{{pkg_name}}">
+                        <div class="pkg-info">
+                            <a
+                                class="package-name no-ul d-inline-block text-truncate mw-100 align-bottom"
+                                href="{{pkg_aur_url}}"
+                                target="_blank"
+                                >{{pkg_name}}</a
+                            >
+                            <div
+                                class="pkg-desc text-subtext small text-truncate"
+                                title="{{pkg_desc}}"
+                            >
+                                {{pkg_desc}}
+                            </div>
+                            <div class="pkg-meta text-subtext small text-truncate">
+                                {{pkg_version}} <span class="opacity-50">({{pkg_arch}})</span>
+                            </div>
+                        </div>
+                        <div class="pkg-actions d-inline-flex align-items-center gap-1">
+                            <button
+                                class="btn-icon pkg-copy-btn"
+                                data-pkg="{{pkg_name}}"
+                                title="Copy: sudo pacman -S {{pkg_name}}"
+                            >
+                                <svg class="bi" width="14" height="14" fill="currentColor">
+                                    <use href="src/icons.svg#icon-copy" />
+                                </svg>
+                            </button>
+                            <a
+                                class="btn-icon"
+                                href="{{pkg_dwn_url}}"
+                                title="Download {{pkg_filename}}"
+                                download
+                            >
+                                <svg class="bi" width="14" height="14" fill="currentColor">
+                                    <use href="src/icons.svg#icon-download" />
+                                </svg>
+                            </a>
+                        </div>
+                    </li>
+                    <!-- ROW_TEMPLATE_END -->
+                </ul>
             </section>
         </main>
 
