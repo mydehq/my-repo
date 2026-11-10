@@ -190,6 +190,7 @@ body {
 }
 
 .package-name {
+    font-size: 1.05rem;
     font-weight: 600;
     color: var(--ctp-mauve);
     transition: color 0.2s ease;

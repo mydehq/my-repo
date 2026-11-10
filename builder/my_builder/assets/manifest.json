@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+  "id": "./",
+  "name": "{{repo_display_name}}",
+  "short_name": "{{repo_name}}",
+  "description": "{{repo_desc}}",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#1e1e2e",
+  "background_color": "#1e1e2e",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "developer",
+    "archlinux",
+    "aur"
+  ],
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "450x509",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Available Packages",
+      "short_name": "Packages",
+      "description": "Browse available packages in repository",
+      "url": "./#packages",
+      "icons": [
+        {
+          "src": "icon.png",
+          "sizes": "450x509"
+        }
+      ]
+    },
+    {
+      "name": "Installation",
+      "short_name": "Install",
+      "description": "Quick setup command for pacman",
+      "url": "./#installation",
+      "icons": [
+        {
+          "src": "icon.png",
+          "sizes": "450x509"
+        }
+      ]
+    }
+  ]
+}
