@@ -140,13 +140,27 @@ jobs:
           CI_RUN_HASH="${GITHUB_SHA:0:7}"
           su builder -c "CI_RUN_URL='$CI_RUN_URL' CI_RUN_HASH='$CI_RUN_HASH' /opt/my-builder-venv/bin/my-builder --config config.yml build-index"
 
+          # Check if builder index assets or code were modified in this push
+          INDEX_CHANGED="false"
+          DIFF_BASE="${BEFORE_SHA:-}"
+          if [ -z "$DIFF_BASE" ] || [ "$DIFF_BASE" = "0000000000000000000000000000000000000000" ] || ! git rev-parse --verify "$DIFF_BASE" >/dev/null 2>&1; then
+            DIFF_BASE="HEAD~1"
+          fi
+
+          if git rev-parse --verify "$DIFF_BASE" >/dev/null 2>&1; then
+            if git diff --name-only "$DIFF_BASE" "$GITHUB_SHA" 2>/dev/null | grep -qE '^(builder/my_builder/assets/|builder/my_builder/lib/site\.py|config\.yml)'; then
+              echo "Detected changes to builder index assets or generator code."
+              INDEX_CHANGED="true"
+            fi
+          fi
+
           cd "$BUILD_DIR/$ARCH"
 
           NEW_PKGS=$(find . -maxdepth 1 -type f -name '*.pkg.tar.zst' -print | wc -l)
 
           if [ "$NEW_PKGS" -eq 0 ] && [ ! -f "$GITHUB_WORKSPACE/$BUILD_DIR/.db-updated" ]; then
-            if [ "$FORCE_INDEX" = "true" ]; then
-              echo "No package changes. Publishing the rebuilt site index."
+            if [ "$FORCE_INDEX" = "true" ] || [ "$INDEX_CHANGED" = "true" ]; then
+              echo "No package changes, but force_index is set or index code changed. Publishing rebuilt site index."
               echo "updated=true" >> "$GITHUB_OUTPUT"
             else
               echo "No packages built or removed. Skipping release update."
@@ -213,6 +227,7 @@ jobs:
           CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GITHUB_SHA: ${{ github.sha }}
           FORCE_INDEX: ${{ inputs.force_index }}
+          BEFORE_SHA: ${{ github.event.before }}
 
       - name: Generate Job Summary
         if: always()
@@ -271,7 +286,7 @@ jobs:
               for mpkg in missing_pkgs:
                   lines.append(f"- \`{mpkg}\`")
               lines.append("")
-              lines.append('Please check the package names in `config.yml` or ensure they exist on the AUR.')
+              lines.append('Please check the package names in \`config.yml\` or ensure they exist on the AUR.')
 
           if entries:
               lines.append("### Built Packages")
