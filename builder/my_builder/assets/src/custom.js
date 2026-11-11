@@ -85,6 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const packageList = document.getElementById("package-list");
   const packageRowTemplate = document.getElementById("pkg-row-template");
   let packagesLoaded = false;
+  let allPackages = [];
 
   function safeHttpUrl(value) {
     if (typeof value !== "string" || !value) return "";
@@ -138,6 +139,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return row;
   }
 
+  function renderPackageRows(packages) {
+    const Dropdown = window.bootstrap?.Dropdown;
+    packageList
+      .querySelectorAll('[data-bs-toggle="dropdown"][aria-expanded="true"]')
+      .forEach((toggle) => Dropdown?.getInstance(toggle)?.hide());
+
+    packageList.querySelectorAll(".pkg-row").forEach((row) => row.remove());
+    const rows = document.createDocumentFragment();
+    packages.forEach((pkg) => rows.append(createPackageRow(pkg)));
+    packageList.append(rows);
+  }
+
   async function loadPackages() {
     if (!packageList || !packageRowTemplate?.content.firstElementChild) return;
 
@@ -150,9 +163,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const packages = await response.json();
       if (!Array.isArray(packages)) throw new TypeError("Invalid package data");
 
-      const rows = document.createDocumentFragment();
-      packages.forEach((pkg) => rows.append(createPackageRow(pkg)));
-      packageList.append(rows);
+      allPackages = packages.map((pkg) => ({
+        ...pkg,
+        searchText: [
+          pkg.pkg_name,
+          pkg.pkg_desc,
+          pkg.pkg_version,
+          pkg.pkg_arch,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(),
+      }));
       packagesLoaded = true;
       if (emptyMessage) emptyMessage.textContent = "No packages available";
       filterPackages(searchInput?.value || "");
@@ -241,20 +263,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const query = (rawQuery || "").toLowerCase().trim();
     if (!packageList) return;
 
+    const emptyRow = packageList.querySelector(".empty-msg-row");
     const noResultsRow = packageList.querySelector(".no-results-row");
-    const pkgRows = packageList.querySelectorAll(".pkg-row");
+    const matches = allPackages.filter(
+      (pkg) => !query || pkg.searchText.includes(query),
+    );
+    renderPackageRows(matches);
 
-    let visibleCount = 0;
-    pkgRows.forEach((row) => {
-      const text = (row.textContent || "").toLowerCase();
-      const matches = !query || text.includes(query);
-      row.style.display = matches ? "" : "none";
-      if (matches) visibleCount++;
-    });
-
-    if (noResultsRow) {
-      noResultsRow.style.display =
-        packagesLoaded && query && visibleCount === 0 ? "flex" : "none";
+    if (packagesLoaded) {
+      if (emptyRow) {
+        emptyRow.style.display =
+          !query && allPackages.length === 0 ? "flex" : "none";
+      }
+      if (noResultsRow) {
+        noResultsRow.style.display = query && matches.length === 0 ? "flex" : "none";
+      }
     }
   }
 
