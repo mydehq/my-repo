@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
         hour12: false,
       });
 
-      lastUpdatedEl.innerHTML = `${dateStr} <span class="time-separator">@</span> ${timeStr}`;
+      lastUpdatedEl.innerHTML = `${dateStr} <span>@</span> ${timeStr}`;
     }
   }
 
@@ -37,7 +37,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       try {
-        if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+        if (!navigator.clipboard?.writeText)
+          throw new Error("Clipboard API unavailable");
         await navigator.clipboard.writeText(text);
       } catch {
         const textArea = document.createElement("textarea");
@@ -51,7 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
         textArea.remove();
         if (!copied) throw new Error("Clipboard copy failed");
       }
-
     } catch {
       if (iconUse) iconUse.setAttribute("href", "src/icons.svg#icon-x");
       btn.setAttribute("title", "Copy failed");

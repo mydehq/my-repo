@@ -47,12 +47,14 @@ def build_parser() -> argparse.ArgumentParser:
         description="Build AUR packages and generate the repository website.",
     )
     parser.add_argument(
-        '-v', "--version",
+        "-v",
+        "--version",
         action="version",
         version=f"Builder {__version__}",
     )
     parser.add_argument(
-        "-c", "--config",
+        "-c",
+        "--config",
         type=Path,
         default=defaults.config_file,
         help="Path to the YAML configuration file (default: config.yml)",
@@ -61,14 +63,16 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", metavar="COMMAND")
     build_command = commands.add_parser("build", help="Build configured AUR packages")
     build_command.add_argument(
-        '-p', "--package",
+        "-p",
+        "--package",
         action="append",
         dest="packages",
         metavar="NAME",
         help="Build only this configured package; may be repeated",
     )
     build_command.add_argument(
-        '-r', "--rebuild-missing",
+        "-r",
+        "--rebuild-missing",
         action="store_true",
         help="Rebuild package if binary file is missing from build directory",
     )
@@ -123,7 +127,12 @@ def run_build(
     build_arch_dir.mkdir(parents=True, exist_ok=True)
 
     # Clean up state files from previous runs
-    for stale_file in ("missing-packages.json", "removed-packages.json", "build-summary.json", ".db-updated"):
+    for stale_file in (
+        "missing-packages.json",
+        "removed-packages.json",
+        "build-summary.json",
+        ".db-updated",
+    ):
         (build_dir / stale_file).unlink(missing_ok=True)
 
     if not os.access(build_arch_dir, os.W_OK):
@@ -165,7 +174,9 @@ def run_build(
             log.error(f"Package '{name}' not found on AUR")
         missing_file = build_dir / "missing-packages.json"
         try:
-            missing_file.write_text(json.dumps(missing_packages, indent=2), encoding="utf-8")
+            missing_file.write_text(
+                json.dumps(missing_packages, indent=2), encoding="utf-8"
+            )
         except OSError as e:
             log.warn(f"Failed to write missing packages file: {e}")
         return 1
@@ -192,7 +203,9 @@ def run_build(
 
         needs_build = package.force or not repo_version or repo_version != aur_version
         if not needs_build and rebuild_missing:
-            existing = list(build_arch_dir.glob(f"{package.name}-{repo_version}-*.pkg.tar.*"))
+            existing = list(
+                build_arch_dir.glob(f"{package.name}-{repo_version}-*.pkg.tar.*")
+            )
             if not existing:
                 needs_build = True
 
@@ -226,14 +239,21 @@ def run_build(
                     or aur_version
                     or "unknown"
                 )
-                summary_entries.append({
-                    "name": package.name,
-                    "old_version": repo_version or "*(new)*",
-                    "new_version": new_version,
-                    "filename": file_name,
-                    "size": size_str,
-                })
-        except (FileNotFoundError, RuntimeError, subprocess.SubprocessError, OSError) as e:
+                summary_entries.append(
+                    {
+                        "name": package.name,
+                        "old_version": repo_version or "*(new)*",
+                        "new_version": new_version,
+                        "filename": file_name,
+                        "size": size_str,
+                    }
+                )
+        except (
+            FileNotFoundError,
+            RuntimeError,
+            subprocess.SubprocessError,
+            OSError,
+        ) as e:
             print()
             log.error(f"Build failed for {package.name}: {e}")
             failed_count += 1
@@ -254,7 +274,9 @@ def run_build(
     if removed_pkgs:
         removed_file = build_dir / "removed-packages.json"
         try:
-            removed_file.write_text(json.dumps(removed_pkgs, indent=2), encoding="utf-8")
+            removed_file.write_text(
+                json.dumps(removed_pkgs, indent=2), encoding="utf-8"
+            )
         except OSError as e:
             log.warn(f"Failed to write removed packages file: {e}")
 
@@ -291,7 +313,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in (None, "help"):
         topic = getattr(args, "topic", None)
         subparsers_action = next(
-            (action for action in parser._actions if isinstance(action, argparse._SubParsersAction)),
+            (
+                action
+                for action in parser._actions
+                if isinstance(action, argparse._SubParsersAction)
+            ),
             None,
         )
         if topic and subparsers_action and topic in subparsers_action.choices:

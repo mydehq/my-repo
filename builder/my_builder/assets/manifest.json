@@ -7,22 +7,13 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": [
-    "window-controls-overlay",
-    "standalone",
-    "minimal-ui"
-  ],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
   "theme_color": "#1e1e2e",
   "background_color": "#1e1e2e",
   "lang": "en",
   "dir": "ltr",
-  "categories": [
-    "utilities",
-    "developer",
-    "archlinux",
-    "aur"
-  ],
+  "categories": ["utilities", "developer", "archlinux", "aur"],
   "icons": [
     {
       "src": "icon.png",
