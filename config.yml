@@ -35,3 +35,4 @@ packages:
   - kireisakura-kit
   - keypunch-git:
       extra_pkgs: [cairo]
+  - tmog-bin
