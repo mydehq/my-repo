@@ -29,7 +29,9 @@ def install_deps(pkg_dir: Path, extra_pkgs: list[str] | None = None) -> None:
             dependencies.append(line.split(" = ", maxsplit=1)[1])
 
     dependencies.extend(extra_pkgs or [])
-    dependencies = list(dict.fromkeys(dependency for dependency in dependencies if dependency))
+    dependencies = list(
+        dict.fromkeys(dependency for dependency in dependencies if dependency)
+    )
 
     if not dependencies:
         log.info("No package dependencies found")

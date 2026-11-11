@@ -113,7 +113,9 @@ def _get_pkgbuild_sources(pkgbuild: Path) -> list[str]:
     bash_cmd = f'source {pkgbuild} && printf "%s\\n" "${{source[@]}}"'
     try:
         out = subprocess.check_output(
-            ["bash", "-c", bash_cmd], text=True, timeout=10,
+            ["bash", "-c", bash_cmd],
+            text=True,
+            timeout=10,
         ).strip()
         return out.splitlines() if out else []
     except (subprocess.SubprocessError, OSError, TimeoutError):

@@ -150,7 +150,9 @@ def generate_site(cfg: Config) -> int:
     ci_run_hash = ci_run_hash[:7]
 
     if not ci_run_url:
-        server_url = os.environ.get("GITHUB_SERVER_URL", "https://github.com").rstrip("/")
+        server_url = os.environ.get("GITHUB_SERVER_URL", "https://github.com").rstrip(
+            "/"
+        )
         repository = os.environ.get("GITHUB_REPOSITORY", "").strip()
         run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
 
