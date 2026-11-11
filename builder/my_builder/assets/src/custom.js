@@ -9,18 +9,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const date = new Date(rawValue > 1e11 ? rawValue : rawValue * 1000);
 
     if (!isNaN(date.getTime())) {
-      const dateStr = date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-      });
+      const dateStr = [
+        String(date.getDate()).padStart(2, "0"),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getFullYear()).slice(-2),
+      ].join("-");
       const timeStr = date.toLocaleTimeString(undefined, {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
       });
 
-      lastUpdatedEl.innerHTML = `${dateStr} <span>@</span> ${timeStr}`;
+      lastUpdatedEl.innerHTML = `${dateStr}<span class="time-separator">&middot;</span>${timeStr}`;
     }
   }
 
@@ -84,6 +84,28 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Per-row install copy (event delegation) ──
   const packageList = document.getElementById("package-list");
   if (packageList) {
+    const dropdownOrigins = new WeakMap();
+
+    packageList.addEventListener("show.bs.dropdown", (event) => {
+      const dropdown = event.target.closest(".dropdown");
+      const menu = dropdown?.querySelector(".dropdown-menu");
+      if (!dropdown || !menu) return;
+
+      const placeholder = document.createComment("");
+      menu.before(placeholder);
+      dropdownOrigins.set(dropdown, { menu, placeholder });
+      document.body.append(menu);
+    });
+
+    packageList.addEventListener("hidden.bs.dropdown", (event) => {
+      const dropdown = event.target.closest(".dropdown");
+      const origin = dropdown && dropdownOrigins.get(dropdown);
+      if (!origin) return;
+
+      origin.placeholder.replaceWith(origin.menu);
+      dropdownOrigins.delete(dropdown);
+    });
+
     packageList.addEventListener("click", (e) => {
       const btn = e.target.closest(".pkg-copy-btn");
       if (!btn) return;

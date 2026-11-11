@@ -7,8 +7,10 @@ import re
 import subprocess
 from collections.abc import Mapping
 from datetime import UTC, datetime
+from html import escape
 from pathlib import Path
 from shutil import copy2, copymode
+from urllib.parse import urlsplit
 
 from .. import __app__name__, __app_url__, __version__
 from ..defaults import defaults
@@ -17,6 +19,9 @@ from .logger import log
 from .repo import get_repo_pkg_count, get_repo_pkgs
 
 _VAR_RE = re.compile(r"\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}")
+_OPTIONAL_BLOCK_RE = re.compile(
+    r"\{\{#([A-Za-z_][A-Za-z0-9_]*)\}\}(.*?)\{\{/\1\}\}", re.DOTALL
+)
 
 
 class SiteGenerationError(Exception):
@@ -32,7 +37,21 @@ def render_template(
     variables: Mapping[str, object],
     strict: bool = True,
 ) -> str:
-    """Render a template by replacing {var_name} placeholders."""
+    """Render {{name}} placeholders and truthy {{#name}} optional blocks."""
+
+    def replace_optional_block(match: re.Match[str]) -> str:
+        name = match.group(1)
+
+        try:
+            value = variables[name]
+        except KeyError as exc:
+            if strict:
+                raise TemplateError(f"Unknown template variable {name!r}") from exc
+            return ""
+
+        return match.group(2) if value else ""
+
+    content = _OPTIONAL_BLOCK_RE.sub(replace_optional_block, content)
 
     def replace(match: re.Match[str]) -> str:
         name = match.group(1)
@@ -84,6 +103,18 @@ def gen_pkg_list(pkg_template: str, cfg: Config) -> str:
     repo_dwn_base = f"{cfg.repo.url.rstrip('/')}{cfg.repo.down_suffix}".rstrip("/")
 
     for pkg in pkgs.packages:
+        project_url = pkg.url.strip()
+        try:
+            parsed_project_url = urlsplit(project_url)
+        except ValueError:
+            project_url = ""
+        else:
+            if (
+                parsed_project_url.scheme not in {"http", "https"}
+                or not parsed_project_url.netloc
+            ):
+                project_url = ""
+
         entries.append(
             render_template(
                 pkg_template,
@@ -95,7 +126,10 @@ def gen_pkg_list(pkg_template: str, cfg: Config) -> str:
                     "pkg_aur_url": f"{defaults.aur_pkg_url}/{pkg.name}",
                     "pkg_arch": pkg.arch,
                     "pkg_filename": pkg.filename,
-                    "pkg_dwn_url": f"{repo_dwn_base}/{pkg.filename}",
+                    "pkg_download_url": escape(
+                        f"{repo_dwn_base}/{pkg.filename}", quote=True
+                    ),
+                    "pkg_project_url": escape(project_url, quote=True),
                 },
                 strict=False,
             )
