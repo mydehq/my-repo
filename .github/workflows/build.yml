@@ -48,7 +48,7 @@ jobs:
     steps:
       - name: Install System Dependencies
         run: |
-          pacman -Sy --noconfirm --needed base-devel git github-cli jq
+          pacman -Sy --noconfirm --needed base-devel git github-cli jq meson
 
       - name: Checkout Code
         uses: actions/checkout@v7

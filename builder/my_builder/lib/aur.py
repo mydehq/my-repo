@@ -3,10 +3,12 @@ AUR RPC API interaction & git cloning module using pathlib.
 """
 
 import json
+import re
 import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 
 from .logger import log
@@ -19,7 +21,18 @@ class AurRpcError(Exception):
     """Raised when the AUR RPC query fails."""
 
 
-def fetch_aur_versions(package_names: list[str]) -> dict[str, str]:
+@dataclass(frozen=True, slots=True)
+class AurPackageInfo:
+    name: str
+    package_base: str
+    version: str
+    depends: tuple[str, ...]
+    make_depends: tuple[str, ...]
+    provides: tuple[str, ...]
+    check_depends: tuple[str, ...] = ()
+
+
+def fetch_aur_packages(package_names: list[str]) -> dict[str, AurPackageInfo]:
     if not package_names:
         return {}
 
@@ -35,15 +48,63 @@ def fetch_aur_versions(package_names: list[str]) -> dict[str, str]:
                 data = json.loads(resp.read().decode("utf-8"))
                 results = data.get("results", [])
 
-                return {item["Name"]: item["Version"] for item in results}
+                return {
+                    item["Name"]: AurPackageInfo(
+                        name=item["Name"],
+                        package_base=item.get("PackageBase") or item["Name"],
+                        version=item["Version"],
+                        depends=tuple(item.get("Depends") or ()),
+                        make_depends=tuple(item.get("MakeDepends") or ()),
+                        provides=tuple(item.get("Provides") or ()),
+                        check_depends=tuple(item.get("CheckDepends") or ()),
+                    )
+                    for item in results
+                }
             raise AurRpcError(f"AUR RPC returned HTTP status {resp.status}")
 
     except (urllib.error.URLError, json.JSONDecodeError, TimeoutError, OSError) as e:
         raise AurRpcError(f"Failed to query AUR RPC API: {e}") from e
 
 
-def clone_package(pkg_name: str) -> Path:
-    pkg_dir = AUR_CLONE_DIR / pkg_name
+def fetch_aur_versions(package_names: list[str]) -> dict[str, str]:
+    return {
+        name: package.version
+        for name, package in fetch_aur_packages(package_names).items()
+    }
+
+
+def fetch_aur_providers(dependency_name: str) -> list[AurPackageInfo]:
+    query = urllib.parse.urlencode(
+        [("v", "5"), ("type", "search"), ("arg", dependency_name), ("by", "provides")]
+    )
+    url = f"{AUR_BASE_URL}/rpc/?{query}"
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "MyRepoBuilder/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status != 200:
+                raise AurRpcError(f"AUR RPC returned HTTP status {resp.status}")
+            data = json.loads(resp.read().decode("utf-8"))
+            names = [item["Name"] for item in data.get("results", [])]
+    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError, OSError) as e:
+        raise AurRpcError(f"Failed to search AUR providers: {e}") from e
+
+    candidates = fetch_aur_packages(names)
+    name_pattern = re.compile(r"^([A-Za-z0-9@._+-]+)")
+    return [
+        package
+        for package in candidates.values()
+        if any(
+            (match := name_pattern.match(provided))
+            and match.group(1) == dependency_name
+            for provided in package.provides
+        )
+    ]
+
+
+def clone_package(pkg_name: str, package_base: str | None = None) -> Path:
+    package_base = package_base or pkg_name
+    pkg_dir = AUR_CLONE_DIR / package_base
 
     if pkg_dir.exists():
         log.info("Updating cache")
@@ -58,7 +119,7 @@ def clone_package(pkg_name: str) -> Path:
     else:
         log.info("Cloning from AUR")
 
-        url = f"{AUR_BASE_URL}/{pkg_name}.git"
+        url = f"{AUR_BASE_URL}/{package_base}.git"
         res = subprocess.run(
             ["git", "clone", "--quiet", url, str(pkg_dir)],
             capture_output=True,
@@ -69,7 +130,7 @@ def clone_package(pkg_name: str) -> Path:
             raise RuntimeError(f"git clone failed: {res.stderr}")
 
     if not (pkg_dir / "PKGBUILD").exists():
-        raise FileNotFoundError(f"PKGBUILD not found for {pkg_name}")
+        raise FileNotFoundError(f"PKGBUILD not found for {package_base}")
 
     return pkg_dir
 

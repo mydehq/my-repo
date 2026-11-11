@@ -62,4 +62,6 @@ packages:
 Add these optional settings under a package name in the `packages` list:
 
 - `always`: Set to `true` to rebuild the package even when its version is unchanged. Defaults to `false`.
-- `extra_pkgs`: A list of additional Arch packages to install before building. These are installed alongside the package's declared `depends` and `makedepends`.
+- `extra_pkgs`: A list of additional Arch packages to install before building. These are installed alongside the package's declared `depends`, `makedepends`, and `checkdepends`.
+
+Declared dependencies are resolved recursively. Packages in enabled Arch repositories are installed with pacman; missing dependencies are fetched from the AUR, built, and installed before their dependents.
