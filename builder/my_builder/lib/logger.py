@@ -146,11 +146,15 @@ class Logger:
 
         msg: str = sep.join(str(m) for m in msgs)
 
-        # don't print if level is below min level or explicitly disabled
-        if level >= self.min_level or not log_file_only:
+        # don't print if level is below min level or explicitly log-file-only
+        if level >= self.min_level and not log_file_only:
             clr = getattr(color, lcolor)
+            colored_prefix = clr(prefix, bold=True)
 
-            msg = clr(prefix, bold=True) + color.bold(msg) if bold else msg
+            if bold:
+                msg = f"{colored_prefix} {color.bold(msg)}"
+            else:
+                msg = f"{colored_prefix} {msg}"
 
             print(msg, end=end, file=file)
 
