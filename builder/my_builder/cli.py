@@ -95,8 +95,9 @@ def run_build_index(config_path: Path) -> int:
         log.error(color.bold("Failed to generate site"), str(e))
         return 1
 
+    print()
     log.success(
-        f"\nSite generated successfully in {config.site.output_dir.relative_to(Path.cwd())}"
+        f"Site generated successfully in {config.site.output_dir.relative_to(Path.cwd())}"
     )
 
     return 0
@@ -177,7 +178,9 @@ def run_build(
     AUR_CLONE_DIR.mkdir(parents=True, exist_ok=True)
 
     for package in packages:
+        print()
         log.info(f"Processing package: {color.yellow(package.name)}")
+
         repo_info = get_pkg_info(db_file, package.name)
         repo_version = repo_info.version if repo_info else ""
         aur_version = remote_versions[package.name]
@@ -195,7 +198,7 @@ def run_build(
 
         if not needs_build:
             skipped_count += 1
-            log.info("Up-to-date, skipping")
+            log.success("Up-to-date, skipping")
             continue
 
         try:
@@ -231,8 +234,11 @@ def run_build(
                     "size": size_str,
                 })
         except (FileNotFoundError, RuntimeError, subprocess.SubprocessError, OSError) as e:
+            print()
             log.error(f"Build failed for {package.name}: {e}")
             failed_count += 1
+
+        print()
 
     summary_file = build_dir / "build-summary.json"
     try:
@@ -258,10 +264,12 @@ def run_build(
         except OSError:
             pass
 
+    print()
     log.success(
         f"Built: {len(built_pkg_files)}; skipped: {skipped_count}; failed: {failed_count}"
         + (f"; removed: {len(removed_pkgs)}" if removed_pkgs else "")
     )
+
     return 1 if failed_count else 0
 
 
