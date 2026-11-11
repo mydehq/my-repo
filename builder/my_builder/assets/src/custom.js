@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (copyBtn) {
     copyBtn.addEventListener("click", () => {
       const cmdText = document
-        .querySelector("#install-step .font-monospace")
+        .querySelector("#install-step .install-command")
         ?.innerText.trim();
       if (cmdText) copyWithFeedback(copyBtn, cmdText);
     });
@@ -86,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const packageRowTemplate = document.getElementById("pkg-row-template");
   let packagesLoaded = false;
   let allPackages = [];
+  let openPackageDropdown = null;
 
   function safeHttpUrl(value) {
     if (typeof value !== "string" || !value) return "";
@@ -119,7 +120,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const copyButton = row.querySelector('[data-field="copy"]');
     copyButton.dataset.pkg = pkgName;
     copyButton.title = `Copy: sudo pacman -S ${pkgName}`;
-    copyButton.setAttribute("aria-label", `Copy install command for ${pkgName}`);
+    copyButton.setAttribute(
+      "aria-label",
+      `Copy install command for ${pkgName}`,
+    );
 
     const downloadLink = row.querySelector('[data-field="download"]');
     const downloadUrl = safeHttpUrl(pkg.pkg_download_url);
@@ -139,12 +143,60 @@ document.addEventListener("DOMContentLoaded", () => {
     return row;
   }
 
-  function renderPackageRows(packages) {
-    const Dropdown = window.bootstrap?.Dropdown;
-    packageList
-      .querySelectorAll('[data-bs-toggle="dropdown"][aria-expanded="true"]')
-      .forEach((toggle) => Dropdown?.getInstance(toggle)?.hide());
+  function closePackageDropdown() {
+    if (!openPackageDropdown) return;
 
+    const { menu, placeholder, toggle } = openPackageDropdown;
+    menu.classList.remove("show");
+    menu.removeAttribute("style");
+    toggle.setAttribute("aria-expanded", "false");
+    placeholder.replaceWith(menu);
+    openPackageDropdown = null;
+  }
+
+  function showPackageDropdown(toggle) {
+    const dropdown = toggle.closest(".package-dropdown");
+    const menu = dropdown?.querySelector(".package-menu");
+    if (!menu) return;
+
+    const placeholder = document.createComment("");
+    menu.before(placeholder);
+    document.body.append(menu);
+    menu.classList.add("show");
+    menu.style.position = "fixed";
+    menu.style.zIndex = "1080";
+    menu.style.right = "auto";
+
+    const toggleRect = toggle.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const edge = 8;
+    const left = Math.max(
+      edge,
+      Math.min(
+        toggleRect.right - menuRect.width,
+        window.innerWidth - menuRect.width - edge,
+      ),
+    );
+    let top = toggleRect.bottom + 4;
+    if (
+      top + menuRect.height > window.innerHeight - edge &&
+      toggleRect.top - menuRect.height - 4 >= edge
+    ) {
+      top = toggleRect.top - menuRect.height - 4;
+    }
+    top = Math.max(
+      edge,
+      Math.min(top, window.innerHeight - menuRect.height - edge),
+    );
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    toggle.setAttribute("aria-expanded", "true");
+    openPackageDropdown = { dropdown, menu, placeholder, toggle };
+  }
+
+  function renderPackageRows(packages) {
+    closePackageDropdown();
     packageList.querySelectorAll(".pkg-row").forEach((row) => row.remove());
     const rows = document.createDocumentFragment();
     packages.forEach((pkg) => rows.append(createPackageRow(pkg)));
@@ -165,12 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       allPackages = packages.map((pkg) => ({
         ...pkg,
-        searchText: [
-          pkg.pkg_name,
-          pkg.pkg_desc,
-          pkg.pkg_version,
-          pkg.pkg_arch,
-        ]
+        searchText: [pkg.pkg_name, pkg.pkg_desc, pkg.pkg_version, pkg.pkg_arch]
           .filter(Boolean)
           .join(" ")
           .toLowerCase(),
@@ -186,29 +233,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (packageList) {
-    const dropdownOrigins = new WeakMap();
-
-    packageList.addEventListener("show.bs.dropdown", (event) => {
-      const dropdown = event.target.closest(".dropdown");
-      const menu = dropdown?.querySelector(".dropdown-menu");
-      if (!dropdown || !menu) return;
-
-      const placeholder = document.createComment("");
-      menu.before(placeholder);
-      dropdownOrigins.set(dropdown, { menu, placeholder });
-      document.body.append(menu);
-    });
-
-    packageList.addEventListener("hidden.bs.dropdown", (event) => {
-      const dropdown = event.target.closest(".dropdown");
-      const origin = dropdown && dropdownOrigins.get(dropdown);
-      if (!origin) return;
-
-      origin.placeholder.replaceWith(origin.menu);
-      dropdownOrigins.delete(dropdown);
-    });
-
     packageList.addEventListener("click", (e) => {
+      const toggle = e.target.closest("[data-dropdown-toggle]");
+      
+      if (toggle && packageList.contains(toggle)) {
+        e.preventDefault();
+        if (openPackageDropdown?.toggle === toggle) {
+          closePackageDropdown();
+        } else {
+          closePackageDropdown();
+          showPackageDropdown(toggle);
+        }
+        return;
+      }
+
       const btn = e.target.closest(".pkg-copy-btn");
       if (!btn) return;
 
@@ -218,6 +256,30 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  document.addEventListener("click", (e) => {
+    if (!openPackageDropdown) return;
+
+    if (openPackageDropdown.menu.contains(e.target)) {
+      if (e.target.closest("a")) closePackageDropdown();
+      return;
+    }
+
+    if (!openPackageDropdown.toggle.contains(e.target)) {
+      closePackageDropdown();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && openPackageDropdown) {
+      const { toggle } = openPackageDropdown;
+      closePackageDropdown();
+      toggle.focus();
+    }
+  });
+
+  document.addEventListener("scroll", closePackageDropdown, true);
+  window.addEventListener("resize", closePackageDropdown);
 
   // ── Package search / filter ──
   const searchInput = document.getElementById("pkg-search");
@@ -276,7 +338,8 @@ document.addEventListener("DOMContentLoaded", () => {
           !query && allPackages.length === 0 ? "flex" : "none";
       }
       if (noResultsRow) {
-        noResultsRow.style.display = query && matches.length === 0 ? "flex" : "none";
+        noResultsRow.style.display =
+          query && matches.length === 0 ? "flex" : "none";
       }
     }
   }
@@ -302,7 +365,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Keyboard shortcut: '/' to open, 'Escape' to close
   document.addEventListener("keydown", (e) => {
     const isOpen = searchBox && searchBox.style.display === "flex";
-    if (e.key === "Escape" && isOpen) {
+    if (e.key === "Escape" && isOpen && !openPackageDropdown) {
       closeSearch();
     } else if (
       e.key === "/" &&
