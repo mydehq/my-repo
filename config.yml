@@ -22,6 +22,7 @@ packages:
   - nsticky-bin
   - mpv-mpris2-bin
   - mpv-modernx
+  - mpv-playlistmanager-git
   - mpv-thumbfast-git
   - vicinae-bin
   - catppuccin-cursors-macchiato
