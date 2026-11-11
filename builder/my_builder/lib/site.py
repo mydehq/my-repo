@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from html import escape
 from pathlib import Path
 from shutil import copy2, copymode
 from urllib.parse import urlsplit
@@ -19,9 +19,6 @@ from .logger import log
 from .repo import get_repo_pkg_count, get_repo_pkgs
 
 _VAR_RE = re.compile(r"\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}")
-_OPTIONAL_BLOCK_RE = re.compile(
-    r"\{\{#([A-Za-z_][A-Za-z0-9_]*)\}\}(.*?)\{\{/\1\}\}", re.DOTALL
-)
 
 
 class SiteGenerationError(Exception):
@@ -37,21 +34,7 @@ def render_template(
     variables: Mapping[str, object],
     strict: bool = True,
 ) -> str:
-    """Render {{name}} placeholders and truthy {{#name}} optional blocks."""
-
-    def replace_optional_block(match: re.Match[str]) -> str:
-        name = match.group(1)
-
-        try:
-            value = variables[name]
-        except KeyError as exc:
-            if strict:
-                raise TemplateError(f"Unknown template variable {name!r}") from exc
-            return ""
-
-        return match.group(2) if value else ""
-
-    content = _OPTIONAL_BLOCK_RE.sub(replace_optional_block, content)
+    """Render {{name}} placeholders."""
 
     def replace(match: re.Match[str]) -> str:
         name = match.group(1)
@@ -66,79 +49,37 @@ def render_template(
     return _VAR_RE.sub(replace, content)
 
 
-def get_pkg_template(content: str) -> str:
-    inside = False
-    found_start = False
-    lines: list[str] = []
-
-    for line in content.splitlines(keepends=True):
-        if defaults.pkg_template_start in line:
-            if found_start:
-                raise TemplateError("Multiple package template blocks found")
-
-            found_start = True
-            inside = True
-            continue
-
-        if defaults.pkg_template_end in line:
-            if not inside:
-                raise TemplateError("Found end marker before start marker")
-
-            return "".join(lines)
-
-        if inside:
-            lines.append(line)
-
-    if found_start:
-        raise TemplateError("Missing package template end marker")
-
-    return ""
-
-
-def gen_pkg_list(pkg_template: str, cfg: Config) -> str:
-    """Generate the HTML for all package entries."""
-
-    entries: list[str] = []
-    pkgs = get_repo_pkgs(cfg.repo.db_file)
-    repo_dwn_base = f"{cfg.repo.url.rstrip('/')}{cfg.repo.down_suffix}".rstrip("/")
-
-    for pkg in pkgs.packages:
-        project_url = pkg.url.strip()
-        try:
-            parsed_project_url = urlsplit(project_url)
-        except ValueError:
-            project_url = ""
-        else:
-            if (
-                parsed_project_url.scheme not in {"http", "https"}
-                or not parsed_project_url.netloc
-            ):
-                project_url = ""
-
-        entries.append(
-            render_template(
-                pkg_template,
-                {
-                    "pkg_name": pkg.name,
-                    "pkg_desc": pkg.desc,
-                    "pkg_version": pkg.version,
-                    "pkg_url": pkg.url,
-                    "pkg_aur_url": f"{defaults.aur_pkg_url}/{pkg.name}",
-                    "pkg_arch": pkg.arch,
-                    "pkg_filename": pkg.filename,
-                    "pkg_download_url": escape(
-                        f"{repo_dwn_base}/{pkg.filename}", quote=True
-                    ),
-                    "pkg_project_url": escape(project_url, quote=True),
-                },
-                strict=False,
-            )
-        )
-
-    if not entries:
+def _validate_project_url(raw_url: str) -> str:
+    project_url = raw_url.strip()
+    try:
+        parsed_url = urlsplit(project_url)
+    except ValueError:
         return ""
 
-    return "\n".join(entries)
+    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        return ""
+
+    return project_url
+
+
+def gen_pkg_data(cfg: Config) -> list[dict[str, str]]:
+    """Generate package data for the client-rendered package list."""
+    packages = get_repo_pkgs(cfg.repo.db_file)
+    repo_dwn_base = f"{cfg.repo.url.rstrip('/')}{cfg.repo.down_suffix}".rstrip("/")
+
+    return [
+        {
+            "pkg_name": pkg.name,
+            "pkg_desc": pkg.desc,
+            "pkg_version": pkg.version,
+            "pkg_aur_url": f"{defaults.aur_pkg_url}/{pkg.name}",
+            "pkg_arch": pkg.arch,
+            "pkg_filename": pkg.filename,
+            "pkg_download_url": f"{repo_dwn_base}/{pkg.filename}",
+            "pkg_project_url": _validate_project_url(pkg.url),
+        }
+        for pkg in packages.packages
+    ]
 
 
 def generate_site(cfg: Config) -> int:
@@ -163,6 +104,8 @@ def generate_site(cfg: Config) -> int:
         raise SiteGenerationError(
             f"Database file not found: {cfg.repo.db_file}, Have You bulit repo?"
         ) from e
+
+    package_data = gen_pkg_data(cfg)
 
     ci_run_url = os.environ.get("CI_RUN_URL", "").strip()
     ci_run_hash = os.environ.get("CI_RUN_HASH", "").strip()
@@ -234,19 +177,6 @@ def generate_site(cfg: Config) -> int:
             raise SiteGenerationError(f"Failed to read template: {path}") from e
 
         try:
-            pkg_template = get_pkg_template(content)
-        except TemplateError as e:
-            raise SiteGenerationError(f"{e} in {path.relative_to(Path.cwd())}: ") from e
-
-        if pkg_template:
-            try:
-                pkg_rows = gen_pkg_list(pkg_template, cfg)
-            except TemplateError as e:
-                raise SiteGenerationError(f"{path.relative_to(Path.cwd())}: {e}") from e
-
-            content = content.replace(pkg_template, pkg_rows)
-
-        try:
             content = render_template(content, variables)
         except TemplateError as e:
             raise SiteGenerationError(f"{path.relative_to(Path.cwd())}: {e}") from e
@@ -258,5 +188,15 @@ def generate_site(cfg: Config) -> int:
             raise SiteGenerationError(f"Failed to write output file: {out_path}") from e
 
         log.info(f"Processed {path.relative_to(cfg.site.input_dir)}")
+
+    try:
+        (cfg.site.output_dir / "packages.json").write_text(
+            json.dumps(package_data, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+    except OSError as e:
+        raise SiteGenerationError(
+            f"Failed to write package data: {cfg.site.output_dir / 'packages.json'}"
+        ) from e
 
     return 0

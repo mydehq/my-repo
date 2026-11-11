@@ -15,9 +15,6 @@ class Defaults:
     aur_url: str = "https://aur.archlinux.org"
     aur_pkg_url: str = field(init=False)
 
-    pkg_template_start: str = "ROW_TEMPLATE_START"
-    pkg_template_end: str = "ROW_TEMPLATE_END"
-
     def __post_init__(self) -> None:
         self.aur_url = self.aur_url.rstrip("/")
         self.aur_pkg_url = f"{self.aur_url}/packages"

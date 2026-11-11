@@ -83,6 +83,86 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Per-row install copy (event delegation) ──
   const packageList = document.getElementById("package-list");
+  const packageRowTemplate = document.getElementById("pkg-row-template");
+  let packagesLoaded = false;
+
+  function safeHttpUrl(value) {
+    if (typeof value !== "string" || !value) return "";
+
+    try {
+      const url = new URL(value, document.baseURI);
+      return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function createPackageRow(pkg) {
+    const row = packageRowTemplate.content.firstElementChild.cloneNode(true);
+    const pkgName = pkg.pkg_name || "";
+    row.dataset.pkg = pkgName;
+
+    const nameLink = row.querySelector('[data-field="name"]');
+    nameLink.textContent = pkgName;
+    nameLink.title = pkgName;
+    const aurUrl = safeHttpUrl(pkg.pkg_aur_url);
+    if (aurUrl) nameLink.href = aurUrl;
+
+    const description = row.querySelector('[data-field="description"]');
+    description.textContent = pkg.pkg_desc || "";
+    description.title = pkg.pkg_desc || "";
+    row.querySelector('[data-field="version"]').textContent =
+      pkg.pkg_version || "";
+    row.querySelector('[data-field="arch"]').textContent = pkg.pkg_arch || "";
+
+    const copyButton = row.querySelector('[data-field="copy"]');
+    copyButton.dataset.pkg = pkgName;
+    copyButton.title = `Copy: sudo pacman -S ${pkgName}`;
+    copyButton.setAttribute("aria-label", `Copy install command for ${pkgName}`);
+
+    const downloadLink = row.querySelector('[data-field="download"]');
+    const downloadUrl = safeHttpUrl(pkg.pkg_download_url);
+    if (downloadUrl) {
+      downloadLink.href = downloadUrl;
+      downloadLink.title = `Download ${pkg.pkg_filename || pkgName}`;
+    } else {
+      downloadLink.closest("li").hidden = true;
+    }
+
+    const projectUrl = safeHttpUrl(pkg.pkg_project_url);
+    if (projectUrl) {
+      row.querySelector('[data-field="project"]').href = projectUrl;
+      row.querySelector('[data-field="project-item"]').hidden = false;
+    }
+
+    return row;
+  }
+
+  async function loadPackages() {
+    if (!packageList || !packageRowTemplate?.content.firstElementChild) return;
+
+    const emptyMessage = packageList.querySelector(".empty-msg-row div");
+
+    try {
+      const response = await fetch(new URL("packages.json", document.baseURI));
+      if (!response.ok) throw new Error("Package data request failed");
+
+      const packages = await response.json();
+      if (!Array.isArray(packages)) throw new TypeError("Invalid package data");
+
+      const rows = document.createDocumentFragment();
+      packages.forEach((pkg) => rows.append(createPackageRow(pkg)));
+      packageList.append(rows);
+      packagesLoaded = true;
+      if (emptyMessage) emptyMessage.textContent = "No packages available";
+      filterPackages(searchInput?.value || "");
+    } catch {
+      if (emptyMessage) emptyMessage.textContent = "Unable to load packages";
+    } finally {
+      packageList.setAttribute("aria-busy", "false");
+    }
+  }
+
   if (packageList) {
     const dropdownOrigins = new WeakMap();
 
@@ -174,7 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (noResultsRow) {
       noResultsRow.style.display =
-        query && visibleCount === 0 ? "flex" : "none";
+        packagesLoaded && query && visibleCount === 0 ? "flex" : "none";
     }
   }
 
@@ -234,4 +314,6 @@ document.addEventListener("DOMContentLoaded", () => {
       filterPackages(initialQuery);
     }
   }
+
+  loadPackages();
 });
